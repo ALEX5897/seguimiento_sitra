@@ -1,0 +1,30 @@
+{
+  "name": "sistra-backend",
+  "version": "0.1.0",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "migrate": "node src/migrate.js",
+    "seed": "node src/seed.js",
+    "load-excel": "node src/load_excel.js",
+    "test-notif": "node src/test_notifications.js",
+    "keycloak-assign-solo-vista": "node keycloak_assign_solo_vista.js",
+    "keycloak-sync-users": "node keycloak_sync_users.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
+    "express": "^4.18.2",
+    "express-session": "^1.19.0",
+    "keycloak-connect": "^26.1.1",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.3.2",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}

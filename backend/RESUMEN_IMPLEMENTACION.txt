@@ -1,0 +1,236 @@
+📧 SISTEMA DE NOTIFICACIONES POR CORREO - IMPLEMENTACIÓN COMPLETADA
+=====================================================================
+
+✅ SE HA IMPLEMENTADO EXITOSAMENTE EL SISTEMA COMPLETO
+
+## 🎯 Lo que se ha hecho:
+
+### 1. BASE DE DATOS
+   ✅ Tabla usuarios creada (migrations/003_create_users_table.sql)
+      - Campos: id, nombre, correo, cargo, gerencia, telefono, estado
+      - Permite agrupar por gerencias y cargos
+   
+   ✅ Tabla reasignados mejorada
+      - Agregados: usuario_id (FK a usuarios)
+      - Agregados: correo_enviado_expiracion
+      - Agregados: correo_enviado_un_dia_antes
+
+### 2. SERVICIOS NODE.JS
+   ✅ src/services/mailService.js
+      - Configura Outlook Office365 como servidor SMTP
+      - Función: enviarNotificacionDocumentos()
+      - Genera correos HTML profesionales con tablas de detalles
+   
+   ✅ src/services/notificationService.js
+      - Detecta documentos expirados (fecha < hoy)
+      - Detecta documentos próximos a expirar (fecha = mañana)
+      - Agrupa documentos por usuario
+      - Marca correos como enviados para evitar duplicados
+   
+   ✅ src/routes/usuarios.js
+      - CRUD completo de usuarios
+      - GET: obtener todos, por ID, por gerencia
+      - POST: crear usuario
+      - PUT: actualizar usuario
+      - DELETE: eliminar usuario
+
+### 3. CRONJOB AUTOMÁTICO
+   ✅ Configurado en index.js
+      - Node-cron programado para ejecutarse diariamente a las 8:00 AM
+      - Timezone: America/Argentina/Buenos_Aires
+      - Ejecutable manualmente vía POST /api/test/notificaciones
+
+### 4. ARCHIVOS DE CONFIGURACIÓN
+   ✅ .env - Contiene todas las variables de entorno
+   ✅ .env.example - Plantilla para referencia
+   ✅ .env.local - Para desarrollo (opcional)
+   ✅ .gitignore - Protege .env de ser commiteado
+
+### 5. DOCUMENTACIÓN
+   ✅ NOTIFICACIONES.md - Guía completa de configuración
+   ✅ script_insertar_usuarios.sql - Usuarios de ejemplo
+   ✅ test_notifications.js - Script para pruebas
+
+### 6. SCRIPTS NPM
+   ✅ npm run test-notif - Prueba el sistema de notificaciones
+
+---
+
+## 🚀 PASOS PARA ACTIVAR:
+
+### PASO 1: Aplicar migraciones
+```bash
+cd backend
+npm run migrate
+```
+
+### PASO 2: Configurar correo Outlook
+1. Ve a https://account.microsoft.com/security/app-passwords
+2. Genera contraseña de aplicación
+3. Edita backend/.env:
+
+```
+MAIL_USER=tu-email@tuempresa.com.ar
+MAIL_PASS=contraseña-generada-aqui
+```
+
+### PASO 3: Crear usuarios
+```bash
+mysql -u root -p seguimiento_v2 < script_insertar_usuarios.sql
+```
+
+O crear manualmente vía API:
+```bash
+curl -X POST http://localhost:3000/api/usuarios \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Juan Pérez",
+    "correo": "juan@empresa.com",
+    "cargo": "Gerente",
+    "gerencia": "Gerencia de Trámites"
+  }'
+```
+
+### PASO 4: Asociar usuarios a documentos
+```sql
+UPDATE reasignados SET usuario_id = 1 WHERE id = 123;
+```
+
+### PASO 5: Reiniciar servidor backend
+```bash
+npm run dev
+```
+
+---
+
+## 📧 FLUJO DE FUNCIONAMIENTO:
+
+Cada día a las 8:00 AM:
+├─ Busca documentos expirados (fecha < hoy)
+├─ Busca documentos próximos a expirar (fecha = mañana)
+├─ Agrupa por usuario
+└─ Envía correos con tabla de detalles
+   └─ Marca como "enviado" para no duplicar
+
+---
+
+## 🧪 PROBAR EL SISTEMA:
+
+**Opción 1: Test automático**
+```bash
+npm run test-notif
+```
+
+**Opción 2: Forzar manualmente desde API**
+```bash
+curl -X POST http://localhost:3000/api/test/notificaciones
+```
+
+**Opción 3: Verificar conexión SMTP**
+```bash
+curl http://localhost:3000/api/health/mail
+```
+
+---
+
+## 📋 ENDPOINTS DEL SISTEMA:
+
+| Método | URL | Descripción |
+|--------|-----|-------------|
+| GET | /api/usuarios | Listar todos los usuarios |
+| POST | /api/usuarios | Crear usuario |
+| GET | /api/usuarios/:id | Obtener usuario por ID |
+| PUT | /api/usuarios/:id | Actualizar usuario |
+| DELETE | /api/usuarios/:id | Eliminar usuario |
+| GET | /api/usuarios/gerencia/:nombre | Listar por gerencia |
+| POST | /api/test/notificaciones | Ejecutar notificaciones manualmente |
+| GET | /api/health/mail | Verificar conexión SMTP |
+
+---
+
+## ⚙️ PERSONALIZAR HORA DEL CRONJOB:
+
+Editar backend/.env:
+
+```
+# 8:00 AM
+CRON_SCHEDULE=0 8 * * *
+
+# 9:00 AM
+CRON_SCHEDULE=0 9 * * *
+
+# Cada 4 horas
+CRON_SCHEDULE=0 */4 * * *
+
+# Solo lunes a las 8:00 AM
+CRON_SCHEDULE=0 8 * * 1
+```
+
+---
+
+## 🛠️ CONFIGURACIÓN AVANZADA:
+
+### Usar Gmail en lugar de Outlook:
+```
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USER=tu-email@gmail.com
+MAIL_PASS=contraseña-de-aplicación-google
+```
+
+### Usar servidor SMTP personalizado:
+```
+MAIL_HOST=tu-servidor.com
+MAIL_PORT=587
+MAIL_USER=usuario
+MAIL_PASS=contraseña
+```
+
+---
+
+## 📝 FORMATO DEL CORREO ENVIADO:
+
+El correo incluye:
+✅ Encabezado profesional con logo
+✅ Tabla con datos tabulados de documentos
+✅ Número de documento, trámite, tipo, remitente, destinatario, asunto
+✅ Fecha máxima de respuesta
+✅ Estado (EXPIRADO o PRÓXIMO A EXPIRAR)
+✅ Pie de página automático
+
+---
+
+## 🔐 CONSIDERACIONES DE SEGURIDAD:
+
+✅ .env no se comitea (googleignore configurado)
+✅ Contraseña de aplicación es más segura
+✅ Base de datos protege correos
+✅ Logs registran intentos fallidos
+
+---
+
+## ❓ TROUBLESHOOTING:
+
+**P: Mi correo no se envía**
+R: Revisa npm run test-notif para ver detalles del error
+
+**P: Cambié .env pero no funciona**
+R: Reinicia el servidor (npm run dev)
+
+**P: Los usuarios no reciben el correo**
+R: Verifica que usuario_id esté asignado en la tabla reasignados
+
+**P: Quiero cambiar la hora**
+R: Edita CRON_SCHEDULE en .env
+
+---
+
+## 📞 INFORMACIÓN IMPORTANTE:
+
+- Los correos usan contraseña de APLICACIÓN, not contraseña normal
+- El cronjob se ejecuta automáticamente desde el servidor
+- No necesitas configurar nada en Windows Task Scheduler
+- Los logs aparecen en la consola del servidor
+- Puedes probar el sistema manualmente sin esperar a las 8:00 AM
+
+¡Sistema listo para usar! 🎉

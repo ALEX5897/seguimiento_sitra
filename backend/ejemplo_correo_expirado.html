@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notificación de Documentos Expirados</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f9f9f9;
+        }
+        .header {
+            background: #dc3545;
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            background: white;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+        }
+        .message {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #555;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th {
+            background: #f0f0f0;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #ddd;
+        }
+        td {
+            padding: 12px;
+            border: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .badge-warning {
+            background: #fd7e14;
+            color: white;
+        }
+        .usuario {
+            color: #0066cc;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚨 2 Documento(s) EXPIRADO(S)</h1>
+            <p>Hola <span class="usuario">Juan Pérez</span></p>
+        </div>
+        <div class="content">
+            <p class="message">Los siguientes documentos han excedido su fecha máxima de respuesta:</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nº Documento</th>
+                        <th>Nº Trámite</th>
+                        <th>Tipo</th>
+                        <th>Remitente</th>
+                        <th>Destinatario</th>
+                        <th>Asunto</th>
+                        <th>Fecha Máxima</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>DOC-2026-001</td>
+                        <td>TR-001-2026</td>
+                        <td>Solicitud</td>
+                        <td>Dirección General</td>
+                        <td>Gerencia de Sistemas</td>
+                        <td>Implementación de Sistema de Gestión</td>
+                        <td>15/02/2026</td>
+                        <td><span class="badge badge-danger">❌ Expirado</span></td>
+                    </tr>
+                    <tr>
+                        <td>DOC-2026-005</td>
+                        <td>TR-005-2026</td>
+                        <td>Informe</td>
+                        <td>Presidencia</td>
+                        <td>Gerencia de Trámites</td>
+                        <td>Reporte de Avances February 2026</td>
+                        <td>18/02/2026</td>
+                        <td><span class="badge badge-danger">❌ Expirado</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="footer">
+                <p>Este es un correo automático del Sistema de Gestión de Documentos (SISTRA).</p>
+                <p>Por favor, no responda a este correo. Si tiene preguntas, contacte al administrador.</p>
+                <p>Fecha de envío: 24/02/2026 09:15:32</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
