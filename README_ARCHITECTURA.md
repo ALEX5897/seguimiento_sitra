@@ -1,46 +1,7 @@
-# Sistema de Asignación de Memos v2 - Guía de Arquitectura y Despliegue
 
-## 📋 Tabla de Contenidos
 
-1. [Visión General](#visión-general)
-2. [Arquitectura del Sistema](#arquitectura-del-sistema)
-3. [Tecnologías](#tecnologías)
-4. [Requisitos del Servidor](#requisitos-del-servidor)
-5. [Instalación Completa](#instalación-completa)
-6. [Configuración](#configuración)
-7. [Despliegue en Producción](#despliegue-en-producción)
-8. [Seguridad](#seguridad)
-9. [Monitoreo y Logs](#monitoreo-y-logs)
-10. [Troubleshooting](#troubleshooting)
 
----
-
-## 🎯 Visión General
-
-**Sistema de Asignación de Memos v2** es una plataforma empresarial moderna para la gestión integral de documentos y memos corporativos.
-
-### Objetivos Principales
-
-- 📄 Centralizar la gestión de documentos corporativos
-- 👤 Automatizar el flujo de asignación de tareas
-- 📧 Notificaciones automáticas y recordatorios
-- 📊 Análisis y reportes en tiempo real
-- 🔐 Autenticación empresarial con SSO/LDAP
-
-### Funcionalidades Clave
-
-- ✅ Gestión de documentos (reasignados, tareas, enviados)
-- ✅ Autenticación centralizada con Keycloak
-- ✅ Carga masiva desde archivos Excel
-- ✅ Notificaciones automáticas programadas
-- ✅ Dashboard interactivo con gráficos
-- ✅ Sistema de comentarios y trazabilidad
-- ✅ Exportación de reportes en Excel
-- ✅ Control de acceso basado en roles (RBAC)
-
----
-
-## 🏗️ Arquitectura del Sistema
+## Arquitectura del Sistema
 
 ### Diagrama de Componentes
 
@@ -115,7 +76,7 @@
 
 ---
 
-## 🛠️ Tecnologías Utilizadas
+##  Tecnologías Utilizadas
 
 ### Backend (Node.js/Express)
 
@@ -156,7 +117,7 @@
 
 ---
 
-## 🖥️ Requisitos del Servidor
+## Requisitos del Servidor
 
 ### Recursos Mínimos (Desarrollo/Testing)
 
@@ -180,11 +141,6 @@ Backup:  Estrategia externa configurada
 Monitor: Alertas y logging
 ```
 
-### Sistemas Operativos Soportados
-
-- ✅ **Linux**: Ubuntu 20.04 LTS, CentOS 8+, Debian 11+
-- ✅ **Windows**: Windows Server 2019 / 2022
-- ✅ **macOS**: v11+ (solo desarrollo)
 
 ### Puertos Requeridos
 
@@ -234,7 +190,7 @@ choco install nodejs mysql git -y
 
 ---
 
-## 📦 Instalación Paso a Paso
+## Instalación Paso a Paso
 
 ### Fase 1: Preparación del Servidor
 
@@ -300,7 +256,7 @@ nano .env
 # ===== BASE DE DATOS =====
 DB_HOST=localhost
 DB_USER=sistra_user
-DB_PASS=contraseña_segura_fuerte_aqui
+DB_PASS=
 DB_NAME=seguimiento_v2
 DB_POOL_SIZE=20
 DB_POOL_TIMEOUT=30000
@@ -314,9 +270,9 @@ LOG_LEVEL=info
 # Para Outlook/Office365
 MAIL_HOST=outlook.office365.com
 MAIL_PORT=587
-MAIL_USER=sistra@empresa.com
-MAIL_PASS=contraseña_aplicacion
-MAIL_FROM="Sistema Memos <sistra@empresa.com>"
+MAIL_USER=
+MAIL_PASS=
+MAIL_FROM="Sistema Memos "
 MAIL_TIMEOUT=10000
 
 # ===== NOTIFICACIONES (CRON) =====
@@ -528,7 +484,7 @@ docker-compose ps
 
 ---
 
-## 🔒 Seguridad
+##  Seguridad
 
 ### Checklist Pre-Producción
 
@@ -718,13 +674,4 @@ CREATE TABLE comentarios (
 
 ---
 
-## 📞 Soporte y Contacto
-
-- **Email técnico**: desarrollo@empresa.com
-- **Chat**: Slack #sistra-devops
-- **Issues**: GitHub Issues
-- **Documentación**: Wiki del proyecto
-
----
-
-**Versión**: 2.0.0 | **Última actualización**: Marzo 2026
+ **Última actualización**: Marzo 2026
