@@ -52,7 +52,7 @@ router.get('/usuario', async (req, res) => {
     }
 
     const usuarioData = rows[0];
-    const permisos = JSON.parse(usuarioData.permisos || '{}');
+    const permisos = parsePermisos(usuarioData.permisos);
 
     res.json({
       usuario: {
@@ -156,7 +156,7 @@ router.post('/login', async (req, res) => {
     );
 
     const rol = roles.length > 0 ? roles[0] : { nombre: 'solo_vista', permisos: '{}' };
-    const permisos = JSON.parse(rol.permisos || '{}');
+    const permisos = parsePermisos(rol.permisos);
 
     // Crear sesión
     req.session.usuario = {
@@ -257,7 +257,7 @@ router.post('/admin-login', async (req, res) => {
     );
 
     const rol = roles.length > 0 ? roles[0] : { nombre: 'admin', permisos: '{}' };
-    const permisos = JSON.parse(rol.permisos || '{}');
+    const permisos = parsePermisos(rol.permisos);
 
     // Crear sesión
     req.session.usuario = {
@@ -491,7 +491,7 @@ router.get('/keycloak/callback', async (req, res) => {
     );
 
     const rol = roles.length > 0 ? roles[0] : { nombre: systemRole, permisos: '{}' };
-    const permisos = JSON.parse(rol.permisos || '{}');
+    const permisos = parsePermisos(rol.permisos);
 
     // Crear sesión
     req.session.usuario = {
@@ -553,3 +553,18 @@ async function registrarLoginFallido(correo, req, motivo) {
 }
 
 module.exports = router;
+
+function parsePermisos(value) {
+  if (!value) {
+    return {};
+  }
+  if (typeof value === 'object') {
+    return value;
+  }
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    console.warn('⚠️  Permisos no son JSON valido, usando objeto vacio.');
+    return {};
+  }
+}

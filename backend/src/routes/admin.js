@@ -29,7 +29,7 @@ router.get('/lista/roles', verificarAutenticacion, verificarAdmin, async (req, r
       id: rol.id,
       nombre: rol.nombre,
       descripcion: rol.descripcion,
-      permisos: JSON.parse(rol.permisos || '{}')
+      permisos: parsePermisos(rol.permisos)
     }));
 
     res.json({ roles: rolesFormateados });
@@ -217,3 +217,18 @@ router.delete('/:id', verificarAutenticacion, verificarAdmin, async (req, res) =
 });
 
 module.exports = router;
+
+function parsePermisos(value) {
+  if (!value) {
+    return {};
+  }
+  if (typeof value === 'object') {
+    return value;
+  }
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    console.warn('⚠️  Permisos no son JSON valido, usando objeto vacio.');
+    return {};
+  }
+}
