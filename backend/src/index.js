@@ -20,6 +20,9 @@ const { initKeycloak, isKeycloakEnabled, getKeycloak } = require('./services/key
 
 const app = express();
 
+// Permitir cookies seguras cuando hay proxy inverso (Nginx, etc.)
+app.set('trust proxy', 1);
+
 // Configurar CORS para permitir credenciales (cookies)
 const getLocalIP = () => {
   try {
@@ -74,6 +77,14 @@ app.use(cors({
 app.use(bodyParser());
 
 // Configurar sesiones
+const isProduction = process.env.NODE_ENV === 'production';
+const sessionSecure = Object.prototype.hasOwnProperty.call(process.env, 'SESSION_SECURE')
+  ? process.env.SESSION_SECURE === 'true'
+  : isProduction;
+const sessionSameSite = process.env.SESSION_SAMESITE
+  ? process.env.SESSION_SAMESITE
+  : (isProduction ? 'none' : false);
+
 const memoryStore = new session.MemoryStore();
 
 app.use(session({
@@ -81,10 +92,10 @@ app.use(session({
   resave: false,
   saveUninitialized: true, // Cambiar a true para guardar sesiones incluso antes de autenticar
   store: memoryStore,
-  cookie: { 
-    secure: process.env.NODE_ENV === 'production', // HTTPS en producción
+  cookie: {
+    secure: sessionSecure,
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : false, // En desarrollo, permitir cross-origin cookies
+    sameSite: sessionSameSite,
     maxAge: 1000 * 60 * 60 * 24 // 24 horas
   }
 }));
