@@ -1,0 +1,41 @@
+ACTUALIZACIÓN DE CORREOS DESDE KEYCLOAK
+========================================
+
+La API de Keycloak no está accesible desde el servidor (Error 401).
+
+Para actualizar los correos de todos los usuarios desde Keycloak, siga estos pasos:
+
+1. EXPORTAR USUARIOS DESDE KEYCLOAK
+   - Acceda a la consola de administración de Keycloak
+   - Navegue a: Realm > Usuarios
+   - Exporte la lista de usuarios (nombre y correo)
+
+2. CREAR ARCHIVO JSON
+   - Cree un archivo con la siguiente estructura:
+   - Guárdelo como: keycloak_users.json en la raíz del proyecto
+
+   Formato esperado:
+   [
+     {
+       "nombre": "ALBAN MONTAÑO ANA MARIA",
+       "correo": "ana.alban@quito-turismo.gob.ec"
+     },
+     {
+       "nombre": "ARBOLEDA BONILLA PABLO ISRAEL",
+       "correo": "pablo.arboleda@quito-turismo.gob.ec"
+     },
+     ...
+   ]
+
+3. EJECUTAR ACTUALIZACIÓN
+   cd backend
+   node src/update_emails_from_json.js ../keycloak_users.json
+
+4. EL SCRIPT HARÁ:
+   - Leerá el archivo JSON con usuarios de Keycloak
+   - Hará match automático con nombres similares en la BD
+   - Actualizará los correos
+   - Mostrará un reporte de cambios
+
+EJEMPLO DE ARCHIVO JSON:
+Vea: keycloak_users_example.json
