@@ -131,6 +131,46 @@ export const useAuthStore = defineStore('auth', {
     },
 
     /**
+     * Inicia sesión con usuario y contraseña (Direct Access Grants de Keycloak)
+     * @param {string} usuario - Usuario de Keycloak
+     * @param {string} contrasena - Contraseña
+     */
+    async loginConKeycloakDirecto(usuario, contrasena) {
+      this.cargando = true;
+      this.error = null;
+
+      try {
+        const response = await fetch('/api/auth/keycloak/direct-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ usuario, contrasena })
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Error al iniciar sesión');
+        }
+
+        const data = await response.json();
+
+        this.usuario = data.usuario;
+        this.isAuthenticated = true;
+        this.permisos = data.usuario?.permisos || {};
+
+        return data.usuario;
+      } catch (err) {
+        this.error = err.message;
+        this.isAuthenticated = false;
+        throw err;
+      } finally {
+        this.cargando = false;
+      }
+    },
+
+    /**
      * Obtiene los datos del usuario autenticado (si existe)
      */
     async fetchUser() {

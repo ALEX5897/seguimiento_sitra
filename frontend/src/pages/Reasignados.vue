@@ -191,7 +191,62 @@
           </div>
           <div class="modal-body">
             <form @submit.prevent="save">
+              <!-- Sección de importación de datos tabulados -->
+              <div class="row mb-4 p-3" style="background: #f8f9fa; border-radius: 8px; border-left: 4px solid #34446C;">
+                <div class="col-12">
+                  <label class="form-label fw-bold mb-2">📋 Llenar datos desde información tabulada</label>
+                  <textarea
+                    v-model="pastedData"
+                    class="form-control mb-2"
+                    rows="2"
+                    placeholder="Pega aquí los 12 valores separados por tabulaciones (copy-paste desde Excel o similar)"
+                    style="font-size: 0.9rem; font-family: monospace;">
+                  </textarea>
+                  <button type="button" @click="procesarDatosTabla" class="btn btn-sm btn-outline-primary">
+                    🔄 Llenar campos automáticamente
+                  </button>
+                </div>
+              </div>
+
               <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold">Fecha Documento</label>
+                  <input v-model="form.fecha_documento" type="datetime-local" class="form-control" />
+                </div>
+                <div class="col-md-6 mb-3">
+                  <UsuarioSelector
+                    v-model="form.reasignado_a"
+                    :selected-user-id="form.usuario_id"
+                    label="Reasignado a"
+                    placeholder="Buscar usuario por nombre..."
+                    required
+                    @usuarioSeleccionado="onUsuarioSeleccionado"
+                  />
+                </div>
+                <div class="col-md-12 mb-3">
+                  <label class="form-label fw-bold">Comentario</label>
+                  <textarea v-model="form.comentario" class="form-control" rows="3" placeholder="Observaciones adicionales..."></textarea>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold">Fecha Reasignación</label>
+                  <input v-model="form.fecha_reasignacion" type="datetime-local" class="form-control" />
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold">Fecha Máx. Respuesta</label>
+                  <input v-model="form.fecha_max_respuesta" type="datetime-local" class="form-control" />
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold">De (Remitente)</label>
+                  <input v-model="form.remitente" class="form-control" placeholder="Quien envía" />
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold">Para (Destinatario)</label>
+                  <input v-model="form.destinatario" class="form-control" placeholder="Quien recibe" />
+                </div>
+                <div class="col-md-12 mb-3">
+                  <label class="form-label fw-bold">Asunto</label>
+                  <input v-model="form.asunto" class="form-control" placeholder="Asunto del documento" />
+                </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label fw-bold">Número Documento *</label>
                   <input v-model="form.numero_documento" class="form-control" placeholder="Ej: DOC-2026-001" required />
@@ -207,48 +262,8 @@
                   </select>
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Importancia</label>
-                  <select v-model="form.importancia" class="form-select">
-                    <option value="">-- Seleccionar --</option>
-                    <option value="Baja">🟢 Baja</option>
-                    <option value="Media">🟡 Media</option>
-                    <option value="Alta">🔴 Alta</option>
-                    <option value="Urgente">⚠️ Urgente</option>
-                  </select>
-                </div>
-                <div class="col-md-6 mb-3">
                   <label class="form-label fw-bold">Nro. Trámite</label>
                   <input v-model="form.numero_tramite" class="form-control" placeholder="Ej: TRAM-2026-001" />
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Fecha Documento</label>
-                  <input v-model="form.fecha_documento" type="datetime-local" class="form-control" />
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Fecha Reasignación</label>
-                  <input v-model="form.fecha_reasignacion" type="datetime-local" class="form-control" />
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Fecha Máx. Respuesta</label>
-                  <input v-model="form.fecha_max_respuesta" type="datetime-local" class="form-control" />
-                </div>
-                <div class="col-md-6 mb-3">
-                  <UsuarioSelector 
-                    v-model="form.reasignado_a"
-                    :selected-user-id="form.usuario_id"
-                    label="Reasignado a"
-                    placeholder="Buscar usuario por nombre..."
-                    required
-                    @usuarioSeleccionado="onUsuarioSeleccionado"
-                  />
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Remitente</label>
-                  <input v-model="form.remitente" class="form-control" placeholder="Quien envía" />
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Destinatario</label>
-                  <input v-model="form.destinatario" class="form-control" placeholder="Quien recibe" />
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label fw-bold">Estado</label>
@@ -261,13 +276,15 @@
                     <option value="enviado">enviado</option>
                   </select>
                 </div>
-                <div class="col-md-12 mb-3">
-                  <label class="form-label fw-bold">Asunto</label>
-                  <input v-model="form.asunto" class="form-control" placeholder="Asunto del documento" />
-                </div>
-                <div class="col-md-12 mb-0">
-                  <label class="form-label fw-bold">Comentario</label>
-                  <textarea v-model="form.comentario" class="form-control" rows="3" placeholder="Observaciones adicionales..."></textarea>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold">Importancia</label>
+                  <select v-model="form.importancia" class="form-select">
+                    <option value="">-- Seleccionar --</option>
+                    <option value="Baja">🟢 Baja</option>
+                    <option value="Media">🟡 Media</option>
+                    <option value="Alta">🔴 Alta</option>
+                    <option value="Urgente">⚠️ Urgente</option>
+                  </select>
                 </div>
               </div>
             </form>
@@ -296,17 +313,18 @@ export default {
     UsuarioSelector,
     ComentariosReasignados
   },
-  data() { 
-    return { 
-      items: [], 
-      form: {}, 
-      editingId: null, 
+  data() {
+    return {
+      items: [],
+      form: {},
+      editingId: null,
       viewItem: null,
       isSaving: false,
       usuarioActual: {},
       usuarioSeleccionado: null,
-      refreshHandler: null
-    } 
+      refreshHandler: null,
+      pastedData: ''
+    }
   },
   mounted() { 
     this.refreshHandler = () => this.load();
@@ -394,21 +412,23 @@ export default {
         showToast('Error al cargar archivo', 'error');
       } 
     },
-    openCreate() { 
+    openCreate() {
       if (this.esSoloLectura) return;
-      this.form = {}; 
+      this.form = {};
+      this.pastedData = '';
       this.usuarioSeleccionado = null;
-      this.editingId = null; 
-      const m = new bootstrap.Modal(document.getElementById('reasignModal')); 
-      m.show(); 
+      this.editingId = null;
+      const m = new bootstrap.Modal(document.getElementById('reasignModal'));
+      m.show();
     },
-    openEdit(item) { 
+    openEdit(item) {
       if (this.esSoloLectura) return;
-      this.form = Object.assign({}, item); 
+      this.form = Object.assign({}, item);
+      this.pastedData = '';
       this.usuarioSeleccionado = null;
-      this.editingId = item.id; 
-      const m = new bootstrap.Modal(document.getElementById('reasignModal')); 
-      m.show(); 
+      this.editingId = item.id;
+      const m = new bootstrap.Modal(document.getElementById('reasignModal'));
+      m.show();
     },
     openEditFromView(item) {
       if (this.esSoloLectura) return;
@@ -477,6 +497,61 @@ export default {
         this.form.usuario_id = null;
         this.usuarioSeleccionado = null;
       }
+    },
+    procesarDatosTabla() {
+      if (!this.pastedData.trim()) {
+        showToast('Por favor pega los datos tabulados', 'warning');
+        return;
+      }
+
+      const values = this.pastedData.trim().split('\t').map(v => v.trim());
+
+      if (values.length !== 12) {
+        showToast(`Se esperaban 12 valores, se encontraron ${values.length}. Asegúrate de que los datos estén separados por tabulaciones.`, 'warning');
+        return;
+      }
+
+      try {
+        // Mapear los valores al formulario según el orden especificado
+        const fecha_doc_raw = values[0].replace(/\s*\(GMT[^\)]*\)/, '').trim();
+        this.form.fecha_documento = this.formatearFechaAlInput(fecha_doc_raw);
+
+        this.form.reasignado_a = values[1].trim();
+        this.form.comentario = values[2].trim();
+
+        const fecha_reasig_raw = values[3].replace(/\s*\(GMT[^\)]*\)/, '').trim();
+        this.form.fecha_reasignacion = this.formatearFechaAlInput(fecha_reasig_raw);
+
+        const fecha_max_raw = values[4].trim();
+        this.form.fecha_max_respuesta = this.formatearFechaAlInput(fecha_max_raw);
+
+        // Extraer nombre sin departamento (texto entre paréntesis)
+        const de = values[5].trim().replace(/\s*\([^\)]*\)/g, '').trim();
+        this.form.remitente = de;
+
+        const para = values[6].trim().replace(/\s*\([^\)]*\)/g, '').trim();
+        this.form.destinatario = para;
+
+        this.form.asunto = values[7].trim();
+        this.form.numero_documento = values[8].trim();
+        this.form.tipo_documento = values[9].trim();
+        this.form.numero_tramite = values[10].trim();
+        this.form.estado = values[11].trim();
+
+        // Limpiar el campo de entrada
+        this.pastedData = '';
+
+        showToast('✓ Datos cargados correctamente', 'success');
+      } catch (err) {
+        console.error('Error procesando datos:', err);
+        showToast('Error al procesar los datos: ' + err.message, 'error');
+      }
+    },
+    formatearFechaAlInput(fecha) {
+      // Convierte "2026-03-16 17:28:45" a formato datetime-local "2026-03-16T17:28:45"
+      // También maneja formato "2026-04-14" (solo fecha)
+      if (!fecha) return '';
+      return fecha.replace(' ', 'T');
     },
     // Deadline helpers
     hasDeadline(item) {

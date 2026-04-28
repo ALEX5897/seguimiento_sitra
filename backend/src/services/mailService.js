@@ -16,6 +16,27 @@ console.log("SMTP_HOST:", smtpHost);
 console.log("SMTP_USER:", smtpUser);
 console.log("TEST_EMAIL:", notificationTestEmail || 'No configurado - usando correos reales');
 
+function reemplazarVariables(texto, datos) {
+  if (!texto) return texto;
+  let resultado = texto;
+  const variables = {
+    '{{nombre}}': datos.nombre || 'Usuario',
+    '{{numero_documento}}': datos.numero_documento || '-',
+    '{{fecha_max_respuesta}}': datos.fecha_max_respuesta || '-',
+    '{{remitente}}': datos.remitente || '-',
+    '{{asunto}}': datos.asunto || '-',
+    '{{destinatario}}': datos.destinatario || '-',
+    '{{cantidad}}': datos.cantidad || '0',
+    '{{tabla_documentos}}': datos.tabla_documentos || ''
+  };
+
+  Object.entries(variables).forEach(([variable, valor]) => {
+    resultado = resultado.replace(new RegExp(variable.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), valor);
+  });
+
+  return resultado;
+}
+
 // Configuración de transporte para Outlook Office365
 const transporter = nodemailer.createTransport({
   host: smtpHost,
@@ -36,8 +57,9 @@ const transporter = nodemailer.createTransport({
  * @param {Object} usuario - Datos del usuario {correo, nombre}
  * @param {Array} documentos - Array de documentos expirados/próximos a expirar
  * @param {String} tipo - 'expirado', 'proximo' (1 día antes) o 'nuevo'
+ * @param {Object} plantillaPersonalizada - Plantilla personalizada {asunto, cuerpo_html}
  */
-async function enviarNotificacionDocumentos(usuario, documentos, tipo = 'expirado') {
+async function enviarNotificacionDocumentos(usuario, documentos, tipo = 'expirado', plantillaPersonalizada = null) {
   const destinatarioOverride = notificationTestEmail && notificationTestEmail.trim();
   const correoUsuario = usuario && usuario.correo ? String(usuario.correo).trim() : '';
   const nombreUsuario = usuario && usuario.nombre ? usuario.nombre : 'Usuario';
@@ -53,76 +75,121 @@ async function enviarNotificacionDocumentos(usuario, documentos, tipo = 'expirad
     const esProximo = tipoNormalizado === 'proximo';
     const esNuevo = tipoNormalizado === 'nuevo';
 
-    const titulo = esNuevo
-      ? `🆕 ${documentos.length} Documento(s) REASIGNADO(S)`
-      : esExpirado
-        ? `🚨 ${documentos.length} Documento(s) EXPIRADO(S)`
-        : `⏰ ${documentos.length} Documento(s) PRÓXIMO(S) A EXPIRAR`;
-    
-    const mensaje = esNuevo
-      ? 'Se ha creado un nuevo documento reasignado. Revisa los detalles:'
-      : esExpirado
-        ? 'Los siguientes documentos han excedido su fecha máxima de respuesta:'
-        : 'Los siguientes documentos vencerán mañana:';
-
     const tablaHTML = generarTablaHTML(documentos, { esExpirado, esProximo, esNuevo });
-    const headerColor = esNuevo ? '#0d6efd' : (esExpirado ? '#dc3545' : '#fd7e14');
-    const bloqueAlerta = esNuevo
-      ? '<div class="alert alert-info"><strong>🆕 NUEVO:</strong> Se asignó un nuevo documento a tu bandeja.</div>'
-      : esProximo
-        ? '<div class="alert alert-warning"><strong>⚠️ ATENCION:</strong> Estos documentos vencen mañana. Toma accion hoy.</div>'
-        : '';
 
-    const html = `
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
-          .container { max-width: 800px; margin: 0 auto; padding: 20px; background: #f9f9f9; }
-          .header { background: ${headerColor}; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
-          .header h1 { margin: 0; font-size: 24px; }
-          .content { background: white; padding: 30px; border-radius: 0 0 8px 8px; }
-          .message { font-size: 16px; margin-bottom: 20px; color: #555; }
-          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          th { background: #f0f0f0; padding: 12px; text-align: left; font-weight: bold; border: 1px solid #ddd; }
-          td { padding: 12px; border: 1px solid #ddd; }
-          tr:nth-child(even) { background: #f9f9f9; }
-          .alert { padding: 12px; border-radius: 4px; margin-bottom: 16px; }
-          .alert-warning { background: #fff3cd; border-left: 4px solid #fd7e14; color: #664d03; }
-          .alert-info { background: #e7f1ff; border-left: 4px solid #0d6efd; color: #0b2f6a; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #999; font-size: 12px; }
-          .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-          .badge-danger { background: #dc3545; color: white; }
-          .badge-warning { background: #fd7e14; color: white; }
-          .badge-info { background: #0d6efd; color: white; }
-          .usuario { color: #0066cc; font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>${titulo}</h1>
-            <p>Hola <span class="usuario">${nombreUsuario}</span></p>
-          </div>
-          <div class="content">
-            ${bloqueAlerta}
-            <p class="message">${mensaje}</p>
-            ${tablaHTML}
-            <div class="footer">
+    let asunto, html;
+
+    if (plantillaPersonalizada) {
+      const datosTemplate = {
+        nombre: nombreUsuario,
+        numero_documento: documentos.length > 0 ? documentos[0].numero_documento : '-',
+        fecha_max_respuesta: documentos.length > 0 ? formatearFecha(documentos[0].fecha_max_respuesta) : '-',
+        remitente: documentos.length > 0 ? documentos[0].remitente : '-',
+        asunto: documentos.length > 0 ? documentos[0].asunto : '-',
+        destinatario: documentos.length > 0 ? documentos[0].destinatario : '-',
+        cantidad: documentos.length,
+        tabla_documentos: tablaHTML
+      };
+
+      asunto = reemplazarVariables(plantillaPersonalizada.asunto, datosTemplate);
+      const cuerpoPersonalizado = reemplazarVariables(plantillaPersonalizada.cuerpo_html, datosTemplate);
+
+      html = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
+            .container { max-width: 800px; margin: 0 auto; padding: 20px; background: #f9f9f9; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th { background: #f0f0f0; padding: 12px; text-align: left; font-weight: bold; border: 1px solid #ddd; }
+            td { padding: 12px; border: 1px solid #ddd; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            ${cuerpoPersonalizado}
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #999; font-size: 12px;">
               <p>Este es un correo automático del Sistema de Gestión de Documentos (SISTRA).</p>
               <p>Por favor, no responda a este correo. Si tiene preguntas, contacte al administrador.</p>
-              <p>Fecha de envío: ${new Date().toLocaleString('es-ES')}</p>
             </div>
           </div>
-        </div>
-      </body>
-      </html>
-    `;
+        </body>
+        </html>
+      `;
+    } else {
+      const titulo = esNuevo
+        ? `🆕 ${documentos.length} Documento(s) REASIGNADO(S)`
+        : esExpirado
+          ? `🚨 ${documentos.length} Documento(s) EXPIRADO(S)`
+          : `⏰ ${documentos.length} Documento(s) PRÓXIMO(S) A EXPIRAR`;
 
-    const asunto = titulo;
+      const mensaje = esNuevo
+        ? 'Se ha creado un nuevo documento reasignado. Revisa los detalles:'
+        : esExpirado
+          ? 'Los siguientes documentos han excedido su fecha máxima de respuesta:'
+          : 'Los siguientes documentos vencerán mañana:';
+
+      const headerColor = esNuevo ? '#0d6efd' : (esExpirado ? '#dc3545' : '#fd7e14');
+      const bloqueAlerta = esNuevo
+        ? '<div class="alert alert-info"><strong>🆕 NUEVO:</strong> Se asignó un nuevo documento a tu bandeja.</div>'
+        : esProximo
+          ? '<div class="alert alert-warning"><strong>⚠️ ATENCION:</strong> Estos documentos vencen mañana. Toma accion hoy.</div>'
+          : '';
+
+      html = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
+            .container { max-width: 800px; margin: 0 auto; padding: 20px; background: #f9f9f9; }
+            .header { background: ${headerColor}; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { background: white; padding: 30px; border-radius: 0 0 8px 8px; }
+            .message { font-size: 16px; margin-bottom: 20px; color: #555; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th { background: #f0f0f0; padding: 12px; text-align: left; font-weight: bold; border: 1px solid #ddd; }
+            td { padding: 12px; border: 1px solid #ddd; }
+            tr:nth-child(even) { background: #f9f9f9; }
+            .alert { padding: 12px; border-radius: 4px; margin-bottom: 16px; }
+            .alert-warning { background: #fff3cd; border-left: 4px solid #fd7e14; color: #664d03; }
+            .alert-info { background: #e7f1ff; border-left: 4px solid #0d6efd; color: #0b2f6a; }
+            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #999; font-size: 12px; }
+            .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+            .badge-danger { background: #dc3545; color: white; }
+            .badge-warning { background: #fd7e14; color: white; }
+            .badge-info { background: #0d6efd; color: white; }
+            .usuario { color: #0066cc; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>${titulo}</h1>
+              <p>Hola <span class="usuario">${nombreUsuario}</span></p>
+            </div>
+            <div class="content">
+              ${bloqueAlerta}
+              <p class="message">${mensaje}</p>
+              ${tablaHTML}
+              <div class="footer">
+                <p>Este es un correo automático del Sistema de Gestión de Documentos (SISTRA).</p>
+                <p>Por favor, no responda a este correo. Si tiene preguntas, contacte al administrador.</p>
+                <p>Fecha de envío: ${new Date().toLocaleString('es-ES')}</p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      asunto = titulo;
+    }
 
     const info = await transporter.sendMail({
       from: `"SISTRA - Sistema de Gestión" <${emailFrom}>`,
@@ -400,6 +467,7 @@ module.exports = {
   enviarNotificacionCambioEstado,
   generarTablaHTML,
   formatearFecha,
+  reemplazarVariables,
   verificarConexion,
   transporter
 };

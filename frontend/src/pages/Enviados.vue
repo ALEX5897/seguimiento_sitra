@@ -146,39 +146,60 @@
           </div>
           <div class="modal-body">
             <form @submit.prevent="save">
+              <!-- Sección de importación de datos tabulados -->
+              <div class="row mb-4 p-3" style="background: #f8f9fa; border-radius: 8px; border-left: 4px solid #34446C;">
+                <div class="col-12">
+                  <label class="form-label fw-bold mb-2">📋 Llenar datos desde información tabulada</label>
+                  <textarea
+                    v-model="pastedData"
+                    class="form-control mb-2"
+                    rows="2"
+                    placeholder="Pega aquí los 8 valores separados por tabulaciones (copy-paste desde Excel o similar)"
+                    style="font-size: 0.9rem; font-family: monospace;">
+                  </textarea>
+                  <button type="button" @click="procesarDatosTablaEnviados" class="btn btn-sm btn-outline-primary">
+                    🔄 Llenar campos automáticamente
+                  </button>
+                </div>
+              </div>
+
               <div class="row">
                 <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Número Documento *</label>
-                  <input v-model="form.numero_documento" class="form-control" placeholder="Ej: ENV-2026-001" required />
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Remitente</label>
+                  <label class="form-label fw-bold">De (Remitente)</label>
                   <input v-model="form.remitente" class="form-control" placeholder="Departamento/Persona que envía" />
                 </div>
-                <div class="col-md-6 mb-3">
-                  <UsuarioSelector 
-                    v-model="form.para"
-                    label="Para"
-                    placeholder="Buscar usuario..."
-                    required
-                    @usuarioSeleccionado="onUsuarioSeleccionado"
-                  />
+                <div class="col-md-12 mb-3">
+                  <label class="form-label fw-bold">Asunto</label>
+                  <input v-model="form.asunto" class="form-control" placeholder="Asunto del documento" />
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label fw-bold">Fecha Documento</label>
                   <input v-model="form.fecha_documento" type="datetime-local" class="form-control" />
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Tipo Documento</label>
-                  <input v-model="form.tipo_documento" class="form-control" placeholder="Ej: Contrato, Memorando" />
+                  <label class="form-label fw-bold">Número Documento *</label>
+                  <input v-model="form.numero_documento" class="form-control" placeholder="Ej: ENV-2026-001" required />
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label fw-bold">No. Referencia</label>
                   <input v-model="form.no_referencia" class="form-control" placeholder="Referencia" />
                 </div>
                 <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold">Tipo Documento</label>
+                  <input v-model="form.tipo_documento" class="form-control" placeholder="Ej: Contrato, Memorando" />
+                </div>
+                <div class="col-md-6 mb-3">
                   <label class="form-label fw-bold">Nro. Trámite</label>
                   <input v-model="form.nro_tramite" class="form-control" placeholder="Número de trámite" />
+                </div>
+                <div class="col-md-6 mb-3">
+                  <UsuarioSelector
+                    v-model="form.para"
+                    label="Para (Usuario Anterior)"
+                    placeholder="Buscar usuario..."
+                    required
+                    @usuarioSeleccionado="onUsuarioSeleccionado"
+                  />
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label fw-bold">Estado</label>
@@ -189,10 +210,6 @@
                     <option value="leído">leído</option>
                     <option value="archivado">archivado</option>
                   </select>
-                </div>
-                <div class="col-md-12 mb-0">
-                  <label class="form-label fw-bold">Asunto</label>
-                  <input v-model="form.asunto" class="form-control" placeholder="Asunto del documento" />
                 </div>
               </div>
             </form>
@@ -219,15 +236,16 @@ export default {
   components: {
     UsuarioSelector
   },
-  data() { 
-    return { 
-      items: [], 
-      form: {}, 
-      editingId: null, 
+  data() {
+    return {
+      items: [],
+      form: {},
+      editingId: null,
       viewItem: null,
       isSaving: false,
-      refreshHandler: null 
-    } 
+      pastedData: '',
+      refreshHandler: null
+    }
   },
   mounted() {
     this.refreshHandler = () => this.load();
@@ -270,17 +288,19 @@ export default {
         });
       } catch (err) { /* ignore if jQuery not loaded */ }
     },
-    openCreate() { 
-      this.form = {}; 
-      this.editingId = null; 
-      const m = new bootstrap.Modal(document.getElementById('enviadoModal')); 
-      m.show(); 
+    openCreate() {
+      this.form = {};
+      this.pastedData = '';
+      this.editingId = null;
+      const m = new bootstrap.Modal(document.getElementById('enviadoModal'));
+      m.show();
     },
-    openEdit(item) { 
-      this.form = Object.assign({}, item); 
-      this.editingId = item.id; 
-      const m = new bootstrap.Modal(document.getElementById('enviadoModal')); 
-      m.show(); 
+    openEdit(item) {
+      this.form = Object.assign({}, item);
+      this.pastedData = '';
+      this.editingId = item.id;
+      const m = new bootstrap.Modal(document.getElementById('enviadoModal'));
+      m.show();
     },
     openEditFromView(item) {
       const viewModal = bootstrap.Modal.getInstance(document.getElementById('viewModal'));
@@ -330,6 +350,62 @@ export default {
       if (usuario) {
         this.form.usuario_id = usuario.id;
       }
+    },
+    procesarDatosTablaEnviados() {
+      if (!this.pastedData.trim()) {
+        showToast('Por favor pega los datos tabulados', 'warning');
+        return;
+      }
+
+      const values = this.pastedData.trim().split('\t').map(v => v.trim());
+
+      if (values.length !== 8) {
+        showToast(`Se esperaban 8 valores, se encontraron ${values.length}. Asegúrate de que los datos estén separados por tabulaciones.`, 'warning');
+        return;
+      }
+
+      try {
+        // Mapear los valores al formulario según el orden especificado
+        // 1. De (Remitente)
+        const de = values[0].trim().replace(/\s*\([^\)]*\)/g, '').trim();
+        this.form.remitente = de;
+
+        // 2. Asunto
+        this.form.asunto = values[1].trim();
+
+        // 3. Fecha Documento
+        const fecha_doc_raw = values[2].replace(/\s*\(GMT[^\)]*\)/, '').trim();
+        this.form.fecha_documento = this.formatearFechaAlInput(fecha_doc_raw);
+
+        // 4. Número Documento
+        this.form.numero_documento = values[3].trim();
+
+        // 5. No. Referencia
+        this.form.no_referencia = values[4].trim();
+
+        // 6. Tipo Documento
+        this.form.tipo_documento = values[5].trim();
+
+        // 7. Nro. Trámite
+        this.form.nro_tramite = values[6].trim();
+
+        // 8. Usuario Anterior (Para)
+        const para = values[7].trim().replace(/\s*\([^\)]*\)/g, '').trim();
+        this.form.para = para;
+
+        // Limpiar el campo de entrada
+        this.pastedData = '';
+
+        showToast('✓ Datos cargados correctamente', 'success');
+      } catch (err) {
+        console.error('Error procesando datos:', err);
+        showToast('Error al procesar los datos: ' + err.message, 'error');
+      }
+    },
+    formatearFechaAlInput(fecha) {
+      // Convierte "2026-04-23 15:07:17" a formato datetime-local "2026-04-23T15:07:17"
+      if (!fecha) return '';
+      return fecha.replace(' ', 'T');
     },
     getStatusClass(status) {
       const s = (status || '').toLowerCase();

@@ -6,9 +6,13 @@
 
 const fs = require('fs');
 const http = require('http');
+const https = require('https');
 const path = require('path');
+require('dotenv').config();
 
-const API_URL = 'http://localhost:3000';
+const API_HOST = process.env.API_HOST || '172.16.1.63';
+const API_PORT = process.env.API_PORT || 3000;
+const API_URL = `http://${API_HOST}:${API_PORT}`;
 const EXCEL_FILE = 'doc/sitra2026.xlsx';
 
 // Función helper para enviar multipart/form-data
@@ -26,8 +30,8 @@ function uploadFile(filePath) {
       ]);
 
       const options = {
-        hostname: 'localhost',
-        port: 3000,
+        hostname: API_HOST,
+        port: API_PORT,
         path: '/api/upload',
         method: 'POST',
         headers: {

@@ -1,26 +1,31 @@
 <template>
-  <div class="login-container" :style="{ backgroundImage: `url('${fondoImg}')` }">
+  <div class="login-container">
+    <!-- Fondo fotográfico con overlay -->
+    <div class="login-bg"></div>
+    <div class="login-overlay"></div>
+
     <!-- Contenedor principal -->
     <div class="login-wrapper">
+      <!-- Encabezado del sitio -->
+      <div class="site-header">
+        <img
+          src="https://turismo.quito.gob.ec/wp-content/uploads/2024/06/logoQT.png"
+          alt="Logo Quito Turismo"
+          class="header-logo"
+        />
+      </div>
+
+      <!-- Caja de login -->
       <div class="login-box">
-        <!-- Logo/Header -->
-        <div class="login-header">
-          <div class="logo-icon">
-            <i class="fas fa-lock"></i>
+        <!-- Contenido -->
+        <div class="login-box-content">
+          <!-- Header con línea decorativa -->
+          <div class="login-header">
+            <div class="header-decoration"></div>
+            <h1>Ingreso a la plataforma</h1>
+            <p class="login-subtitle">Para ingresar debe utilizar su usuario del directorio activo y su respectiva clave.</p>
           </div>
-       <!--<h1>SISTRA</h1>--> 
 
-<img 
-  :src="logoQT"
-  alt="Logo QT"
-  class="logo-img"
-/>
-
-<p class="tagline">Sistema de Asignación de Memos</p>
-        </div>
-
-        <!-- Formulario de Login -->
-        <div class="login-form">
           <!-- Mensajes de error -->
           <div v-if="error" class="alert alert-danger alert-dismissible fade show" role="alert">
             <i class="fas fa-exclamation-circle"></i> {{ error }}
@@ -32,84 +37,129 @@
             <i class="fas fa-check-circle"></i> {{ exito }}
           </div>
 
-          <!-- Login con Keycloak (si está habilitado) -->
-          <div v-if="keycloakHabilitado">
-            <p class="login-type-label">Elige tu tipo de usuario</p>
-            <!-- Tabs para seleccionar método de login -->
-            <div class="login-tabs">
-              <button
-                type="button"
-                :class="['tab-btn', { active: metodoLogin === 'keycloak' }]"
-                @click="metodoLogin = 'keycloak'; loginConKeycloak()"
-              >
-                <i class="fas fa-users"></i> Usuario Normal
-              </button>
-              <button
-                type="button"
-                :class="['tab-btn', { active: metodoLogin === 'admin' }]"
-                @click="metodoLogin = 'admin'"
-              >
-                <i class="fas fa-user-shield"></i> Admin
-              </button>
+          <!-- Formulario principal -->
+          <form v-if="keycloakHabilitado && metodoLogin === 'keycloak'" @submit.prevent="handleLoginKeycloak" class="login-form">
+            <!-- Campo Usuario -->
+            <div class="form-group">
+              <label for="usuario-kc" class="form-label">Usuario</label>
+              <input
+                id="usuario-kc"
+                v-model="formularioKeycloak.usuario"
+                type="text"
+                class="form-control"
+                placeholder="nombre.apellido"
+                required
+                :disabled="cargando"
+              />
             </div>
 
-            <!-- Opción 2: Admin Login -->
-            <form v-if="metodoLogin === 'admin'" @submit.prevent="handleLoginAdmin" class="tab-content">
-              <!-- Campo Usuario -->
-              <div class="form-group">
-                <label for="usuario" class="form-label">
-                  <i class="fas fa-user"></i> Usuario
-                </label>
-                <input
-                  id="usuario"
-                  v-model="formularioAdmin.usuario"
-                  type="text"
-                  class="form-control"
-                  placeholder="usuario"
-                  required
-                  :disabled="cargando"
-                />
-              </div>
-
-              <!-- Campo Contraseña -->
-              <div class="form-group">
-                <label for="contrasena" class="form-label">
-                  <i class="fas fa-lock"></i> Contraseña
-                </label>
-                <input
-                  id="contrasena"
-                  v-model="formularioAdmin.contrasena"
-                  type="password"
-                  class="form-control"
-                  placeholder="••••••••"
-                  required
-                  :disabled="cargando"
-                />
-              </div>
-
-              <!-- Botón Submit -->
-              <button
-                type="submit"
-                class="btn btn-login w-100"
-                :disabled="cargando || !formularioAdmin.usuario || !formularioAdmin.contrasena"
-              >
-                <span v-if="!cargando">
-                  <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-                </span>
-                <span v-else>
-                  <i class="fas fa-spinner fa-spin"></i> Autenticando...
-                </span>
-              </button>
-            </form>
-          </div>
-
-          <!-- Si Keycloak está deshabilitado, solo mostrar login por email -->
-          <form v-else="!keycloakHabilitado" @submit.prevent="handleLoginEmail">
-            <!-- Campo Email -->
+            <!-- Campo Contraseña -->
             <div class="form-group">
-              <label for="correo" class="form-label">
-                <i class="fas fa-envelope"></i> Correo Electrónico
-              </label>
+              <div class="form-label-row">
+                <label for="contrasena-kc" class="form-label">Contraseña</label>
+                <a href="#" class="forgot-password">¿Olvidó su contraseña?</a>
+              </div>
+              <input
+                id="contrasena-kc"
+                v-model="formularioKeycloak.contrasena"
+                type="password"
+                class="form-control"
+                placeholder="••••••••"
+                required
+                :disabled="cargando"
+              />
+            </div>
+
+            <!-- Checkbox Recuérdame -->
+            <div class="form-check">
+              <input
+                id="remember-kc"
+                v-model="recordarme"
+                type="checkbox"
+                class="form-check-input"
+                :disabled="cargando"
+              />
+              <label for="remember-kc" class="form-check-label">Recuérdame</label>
+            </div>
+
+            <!-- Botón Submit -->
+            <button
+              type="submit"
+              class="btn btn-login w-100"
+              :disabled="cargando || !formularioKeycloak.usuario || !formularioKeycloak.contrasena"
+            >
+              <span v-if="!cargando">Iniciar sesión</span>
+              <span v-else><i class="fas fa-spinner fa-spin"></i> Autenticando...</span>
+            </button>
+
+           
+
+            <!-- Enlace a admin -->
+            <div class="login-links">
+              <button
+                type="button"
+                class="btn-link-text"
+                @click="metodoLogin = 'admin'"
+                :disabled="cargando"
+              >
+                Acceso administrador
+              </button>
+            </div>
+          </form>
+
+          <!-- Admin Login -->
+          <form v-else-if="metodoLogin === 'admin'" @submit.prevent="handleLoginAdmin" class="login-form">
+            <div class="form-group">
+              <label for="usuario-admin" class="form-label">Usuario</label>
+              <input
+                id="usuario-admin"
+                v-model="formularioAdmin.usuario"
+                type="text"
+                class="form-control"
+                placeholder="usuario"
+                required
+                :disabled="cargando"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="contrasena-admin" class="form-label">Contraseña</label>
+              <input
+                id="contrasena-admin"
+                v-model="formularioAdmin.contrasena"
+                type="password"
+                class="form-control"
+                placeholder="••••••••"
+                required
+                :disabled="cargando"
+              />
+            </div>
+
+            <button
+              type="submit"
+              class="btn btn-login w-100"
+              :disabled="cargando || !formularioAdmin.usuario || !formularioAdmin.contrasena"
+            >
+              <span v-if="!cargando">Iniciar sesión</span>
+              <span v-else><i class="fas fa-spinner fa-spin"></i> Autenticando...</span>
+            </button>
+
+            <div class="login-links" v-if="keycloakHabilitado">
+              <button
+                type="button"
+                class="btn-link-text"
+                @click="metodoLogin = 'keycloak'"
+                :disabled="cargando"
+              >
+                ← Volver
+              </button>
+            </div>
+          </form>
+
+          <!-- Login por email -->
+          <form v-else @submit.prevent="handleLoginEmail" class="login-form">
+            <div class="form-group">
+              <label for="correo" class="form-label">Correo Electrónico</label>
               <input
                 id="correo"
                 v-model="formulario.correo"
@@ -121,56 +171,22 @@
               />
             </div>
 
-            <!-- Botón de envío -->
             <button
               type="submit"
               class="btn btn-login w-100"
               :disabled="cargando || !formulario.correo"
             >
-              <span v-if="!cargando">
-                <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-              </span>
-              <span v-else>
-                <i class="fas fa-spinner fa-spin"></i> Autenticando...
-              </span>
+              <span v-if="!cargando">Iniciar sesión</span>
+              <span v-else><i class="fas fa-spinner fa-spin"></i> Autenticando...</span>
             </button>
           </form>
         </div>
-
-        <!-- Información adicional -->
-        <div class="login-footer">
-          <p class="text-muted small">
-            <i class="fas fa-info-circle"></i>
-            Acceso restringido. Ingresa con tu correo empresarial.
-          </p>
-        </div>
       </div>
-
-      <!-- Panel informativo 
-      <div class="login-info-panel">
-        <div class="info-item">
-          <i class="fas fa-shield-alt"></i>
-          <h5>Seguro</h5>
-          <p>Autenticación segura con HTTPS y encriptación</p>
-        </div>
-        <div class="info-item">
-          <i class="fas fa-users"></i>
-          <h5>Basado en Roles</h5>
-          <p>Acceso controlado según tu perfil</p>
-        </div>
-        <div class="info-item">
-          <i class="fas fa-chart-bar"></i>
-          <h5>Gestión Centralizada</h5>
-          <p>Administra todos tus documentos en un solo lugar</p>
-        </div>
-    </div>-->
-      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import logoQT from '../assets/logoqt.png'
-import fondoImg from '../assets/fondo.jpg'
 import { useAuthStore } from '../stores/authStore'
 import api from '../api'
 
@@ -178,9 +194,7 @@ export default {
   name: 'Login',
   setup() {
     return {
-      authStore: useAuthStore(),
-      logoQT,
-      fondoImg
+      authStore: useAuthStore()
     }
   },
   data() {
@@ -192,7 +206,12 @@ export default {
         usuario: '',
         contrasena: ''
       },
-      metodoLogin: 'keycloak', // 'keycloak' o 'admin'
+      formularioKeycloak: {
+        usuario: '',
+        contrasena: ''
+      },
+      recordarme: false,
+      metodoLogin: 'keycloak',
       keycloakHabilitado: false,
       cargando: false,
       error: null,
@@ -200,13 +219,11 @@ export default {
     };
   },
   async mounted() {
-    // Si el usuario ya está autenticado, redirigir al dashboard
     if (this.authStore.isAuthenticated) {
       this.$router.push('/dashboard');
       return;
     }
 
-    // Verificar si Keycloak está habilitado en el backend
     await this.verificarKeycloak();
   },
   methods: {
@@ -214,31 +231,35 @@ export default {
       try {
         const response = await api.get('/auth/config');
         this.keycloakHabilitado = response.data.keycloakEnabled || false;
+        if (!this.keycloakHabilitado) {
+          this.metodoLogin = 'email';
+        }
       } catch (err) {
-        console.error('Error al verificar configuración de Keycloak:', err);
-        // Si falla, asumir que Keycloak no está habilitado pero permitir login admin
+        console.error('Error al verificar Keycloak:', err);
         this.keycloakHabilitado = false;
-        // No mostrar error al usuario, solo log en consola
+        this.metodoLogin = 'email';
       }
     },
 
-    async loginConKeycloak() {
+    async handleLoginKeycloak() {
       this.cargando = true;
       this.error = null;
       this.exito = null;
 
       try {
-        // Obtener la URL de login de Keycloak desde el backend
-        const response = await api.get('/auth/keycloak/login');
-        
-        if (response.data.loginUrl) {
-          // Redirigir al usuario a Keycloak para autenticación
-          window.location.href = response.data.loginUrl;
-        } else {
-          throw new Error('No se pudo obtener la URL de login de Keycloak');
-        }
+        await this.authStore.loginConKeycloakDirecto(
+          this.formularioKeycloak.usuario,
+          this.formularioKeycloak.contrasena
+        );
+
+        this.exito = '¡Bienvenido! Redirigiendo...';
+
+        setTimeout(() => {
+          this.$router.push('/dashboard');
+        }, 1000);
       } catch (err) {
-        this.error = err.response?.data?.error || 'Error al conectar con Keycloak';
+        this.error = err.message || 'Credenciales inválidas. Intenta nuevamente.';
+      } finally {
         this.cargando = false;
       }
     },
@@ -250,10 +271,9 @@ export default {
 
       try {
         await this.authStore.login(this.formulario.correo, null);
-        
+
         this.exito = '¡Bienvenido! Redirigiendo...';
 
-        // Redirigir después de 1 segundo
         setTimeout(() => {
           this.$router.push('/dashboard');
         }, 1000);
@@ -283,34 +303,22 @@ export default {
         });
 
         if (!response.ok) {
-          let errorMsg = 'Usuario o contraseña incorrectos';
-          try {
-            const data = await response.json();
-            errorMsg = data.error || errorMsg;
-          } catch (parseError) {
-            // Si no puede parsear JSON, es probable que sea HTML
-            const text = await response.text();
-            console.error('Respuesta no-JSON del servidor:', text.substring(0, 200));
-            errorMsg = 'Error del servidor. Verifica que el backend esté funcionando correctamente.';
-          }
-          throw new Error(errorMsg);
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || 'Usuario o contraseña incorrectos');
         }
 
         const data = await response.json();
-        
-        // Actualizar el store con los datos del usuario
+
         this.authStore.usuario = data.usuario;
         this.authStore.isAuthenticated = true;
         this.authStore.permisos = data.usuario?.permisos || {};
 
         this.exito = '¡Bienvenido! Redirigiendo...';
 
-        // Redirigir después de 1 segundo
         setTimeout(() => {
           this.$router.push('/dashboard');
         }, 1000);
       } catch (err) {
-        console.error('Error en login:', err);
         this.error = err.message || 'Error al iniciar sesión. Intenta nuevamente.';
       } finally {
         this.cargando = false;
@@ -321,7 +329,8 @@ export default {
 </script>
 
 <style scoped>
-/* Evitar scroll y asegurar fondo completo */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 :global(html, body) {
   height: 100%;
   margin: 0;
@@ -332,125 +341,133 @@ export default {
   height: 100%;
 }
 
-/* Variables de colores */
-.logo-img {
-  width: 300px;
-  max-width: 100%;
-  margin: 10px auto 15px auto;
-  display: block;
-  object-fit: contain;
-}
-:root {
-  --primary-color: #4472c4;
-  --secondary-color: #5b9bd5;
-  --success-color: #70ad47;
-  --danger-color: #c5504f;
-  --light-bg: #f5f5f5;
-  --dark-text: #333;
-}
-
 .login-container {
   position: fixed;
   inset: 0;
   width: 100vw;
   height: 100vh;
-  min-height: 100dvh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-color: #667eea;
   z-index: 0;
   overflow: hidden;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.login-container::before {
-  content: '';
+.login-bg {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(102, 126, 234, 0.6);
+  inset: 0;
+  background-image: url('https://as2.ftcdn.net/v2/jpg/01/70/03/67/1000_F_170036772_vOispQGM35tY2nN0PVluT6PgQd8NttZe.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   z-index: 0;
+}
+
+.login-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1;
 }
 
 .login-wrapper {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  max-width: 1000px;
+  justify-content: center;
+  max-width: 600px;
   width: 90%;
   position: relative;
-  z-index: 2;
+  z-index: 10;
+  gap: 30px;
 }
 
-/* Caja de login */
+.site-header {
+  text-align: center;
+  color: white;
+  margin-bottom: 0;
+}
+
+.header-logo {
+  width: 290px;
+  max-width: 100%;
+  margin-bottom: 12px;
+  object-fit: contain;
+  filter: brightness(1.1);
+}
+
+.site-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
 .login-box {
-  background: rgba(255, 255, 255, 0.94);
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
-  padding: 50px 40px;
-  animation: slideInLeft 0.5s ease-out;
+  background: #f3f0f0;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: slideInUp 0.5s ease-out;
   width: 100%;
-  max-width: 450px;
-  backdrop-filter: blur(6px);
+  max-width: 403px;
 }
 
-@keyframes slideInLeft {
+.login-box-content {
+  padding: 40px 40px;
+}
+
+@keyframes slideInUp {
   from {
     opacity: 0;
-    transform: translateX(-30px);
+    transform: translateY(30px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
   }
 }
 
 /* Header de login */
 .login-header {
-  text-align: center;
-  margin-bottom: 40px;
+  text-align: left;
+  margin-bottom: 32px;
+  padding-bottom: 0;
 }
 
-.logo-icon {
-  font-size: 48px;
-  color: var(--primary-color);
-  margin-bottom: 15px;
-  animation: bounce 2s ease-in-out infinite;
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+.header-decoration {
+  width: 60px;
+  height: 5px;
+  background: linear-gradient(90deg, #FF6B35 0%, #FF9800 100%);
+  border-radius: 3px;
+  margin-bottom: 14px;
 }
 
 .login-header h1 {
   font-size: 32px;
   font-weight: 700;
-  color: var(--dark-text);
-  margin: 10px 0;
-  letter-spacing: 2px;
+  color: #1a1a1a;
+  margin: 0 0 10px 0;
+  letter-spacing: -0.5px;
 }
 
-.tagline {
-  color: #888;
-  font-size: 14px;
+.login-subtitle {
+  font-size: 15px;
+  color: #666;
   margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  line-height: 1.6;
+  font-weight: 400;
 }
 
 /* Formulario */
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 .form-group {
@@ -459,67 +476,101 @@ export default {
   gap: 8px;
 }
 
+.form-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
 .form-label {
   font-weight: 600;
-  color: var(--dark-text);
+  color: #1a1a1a;
   font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  margin: 0;
+  display: block;
+}
+
+.forgot-password {
+  font-size: 13px;
+  color: #FF6B35;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.forgot-password:hover {
+  color: #E55A25;
+  text-decoration: underline;
 }
 
 .form-control {
-  padding: 12px 15px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 14px;
+  padding: 16px 18px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 15px;
   transition: all 0.3s ease;
-  background: #fafafa;
+  background: white;
+  font-family: inherit;
+  font-weight: 400;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .form-control:focus {
   outline: none;
-  border-color: var(--primary-color);
+  border-color: #34446C;
   background: white;
-  box-shadow: 0 0 0 3px rgba(68, 114, 196, 0.1);
+  box-shadow: 0 4px 16px rgba(52, 68, 108, 0.12);
+}
+
+.form-control::placeholder {
+  color: #b0b0b0;
+  font-weight: 400;
 }
 
 .form-control:disabled {
-  background: #f0f0f0;
+  background: #f9f9f9;
   cursor: not-allowed;
+  color: #999;
+  border-color: #e5e5e5;
 }
 
 /* Checkbox */
 .form-check {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 10px 0;
+  gap: 10px;
+  margin: 6px 0 0 0;
 }
 
 .form-check-input {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   cursor: pointer;
-  accent-color: var(--primary-color);
+  accent-color: #34446C;
+  flex-shrink: 0;
 }
 
 .form-check-label {
   cursor: pointer;
   font-size: 14px;
-  color: #666;
+  color: #555;
   user-select: none;
+  margin: 0;
+  font-weight: 500;
 }
 
 /* Alertas */
 .alert {
-  padding: 12px 15px;
-  border-radius: 8px;
-  font-size: 14px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-size: 13px;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 10px;
   animation: slideDown 0.3s ease-out;
+  margin-bottom: 18px;
 }
 
 @keyframes slideDown {
@@ -549,19 +600,21 @@ export default {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 18px;
   color: inherit;
   padding: 0;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 /* Botón de login */
 .btn-login {
-  padding: 14px 20px;
-  font-size: 16px;
+  padding: 14px 24px;
+  font-size: 15px;
   font-weight: 600;
   border: none;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  border-radius: 12px;
+  background: #34446C;
   color: white;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -569,103 +622,81 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-top: 10px;
+  margin-top: 4px;
+  box-shadow: 0 6px 20px rgba(52, 68, 108, 0.25);
+  letter-spacing: 0.3px;
 }
 
 .btn-login:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(68, 114, 196, 0.4);
+  background: #2a365c;
+  box-shadow: 0 10px 30px rgba(52, 68, 108, 0.4);
+  transform: translateY(-3px);
 }
 
 .btn-login:active:not(:disabled) {
-  transform: translateY(0);
+  background: #1f264a;
+  transform: translateY(-1px);
 }
 
 .btn-login:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
-/* Botón de Keycloak */
-.btn-keycloak {
-  width: 100%;
+/* Botón de soporte */
+.btn-support {
   padding: 14px 20px;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  border: none;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #e53935 0%, #d32f2f 100%);
-  color: white;
+  border: 2px solid #34446C;
+  border-radius: 12px;
+  background: transparent;
+  color: #34446C;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  width: 100%;
 }
 
-.btn-keycloak:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(229, 57, 53, 0.4);
+.btn-support:hover {
+  background: rgba(52, 68, 108, 0.08);
+  border-color: #2a365c;
+  color: #2a365c;
 }
 
-.btn-keycloak:active:not(:disabled) {
-  transform: translateY(0);
+.btn-support:active {
+  background: rgba(52, 68, 108, 0.15);
 }
 
-.btn-keycloak:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Tabs de Login */
-.login-tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  justify-content: center;
-}
-
-.login-type-label {
+/* Botones de enlace */
+.login-links {
   text-align: center;
-  font-size: 13px;
-  font-weight: 600;
-  color: #666;
-  margin: 0 0 10px 0;
-  letter-spacing: 0.5px;
+  padding-top: 10px;
 }
 
-.tab-btn {
-  flex: 1;
-  padding: 12px 16px;
+.btn-link-text {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #34446C;
   font-size: 14px;
   font-weight: 600;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  background: white;
-  color: #333;
   cursor: pointer;
+  text-decoration: none;
   transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
 }
 
-.tab-btn:hover {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
+.btn-link-text:hover:not(:disabled) {
+  color: #FF6B35;
+  text-decoration: underline;
 }
 
-.tab-btn.active {
-  border-color: var(--primary-color);
-  background: var(--primary-color);
-  color: white;
-  box-shadow: 0 4px 12px rgba(68, 114, 196, 0.3);
+.btn-link-text:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .tab-content {
@@ -686,112 +717,161 @@ export default {
 /* Divider */
 
 
-/* Divisor */
-.divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  margin: 20px 0;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.divider span {
-  padding: 0 15px;
-  color: #999;
-  font-size: 14px;
-  font-weight: 600;
-}
-
 /* Footer de login */
 .login-footer {
   text-align: center;
-  margin-top: 30px;
-  padding-top: 20px;
+  margin-top: 20px;
+  padding-top: 15px;
   border-top: 1px solid #e0e0e0;
 }
 
 .login-footer .text-muted {
   color: #999;
   font-size: 12px;
-}
-
-/* Panel informativo */
-.login-info-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  animation: slideInRight 0.5s ease-out;
-}
-
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.info-item {
-  background: rgba(255, 255, 255, 0.95);
-  padding: 25px;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
-}
-
-.info-item:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-}
-
-.info-item i {
-  font-size: 32px;
-  color: var(--primary-color);
-  margin-bottom: 10px;
-  display: block;
-}
-
-.info-item h5 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--dark-text);
-  margin: 10px 0;
-}
-
-.info-item p {
-  font-size: 13px;
-  color: #666;
   margin: 0;
-  line-height: 1.5;
 }
 
-/* Responsivo */
+/* Responsivo - Tablet */
 @media (max-width: 768px) {
   .login-wrapper {
-    grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 28px;
+    width: 95%;
+  }
+
+  .site-header {
+    margin-bottom: 0;
+  }
+
+  .header-logo {
+    width: 242px;
+    margin-bottom: 10px;
+  }
+
+  .site-title {
+    font-size: 16px;
   }
 
   .login-box {
-    padding: 40px 30px;
+    border-radius: 22px;
+    max-width: 370px;
+  }
+
+  .login-box-content {
+    padding: 35px 32px;
+  }
+
+  .login-header {
+    margin-bottom: 28px;
+  }
+
+  .login-header h1 {
+    font-size: 28px;
+    margin-bottom: 14px;
+  }
+
+  .login-subtitle {
+    font-size: 14px;
+  }
+
+  .form-control {
+    padding: 14px 16px;
+    font-size: 14px;
+    border-radius: 11px;
+  }
+
+  .btn-login {
+    padding: 15px 20px;
+    font-size: 14px;
+    border-radius: 11px;
+  }
+
+  .btn-support {
+    padding: 13px 18px;
+    font-size: 13px;
+    border-radius: 11px;
+  }
+
+  .form-label {
+    font-size: 13px;
+  }
+
+  .login-form {
+    gap: 16px;
+  }
+}
+
+/* Responsivo - Mobile */
+@media (max-width: 480px) {
+  .login-wrapper {
+    width: 100%;
+    padding: 0 16px;
+    gap: 24px;
+  }
+
+  .site-title {
+    font-size: 14px;
+  }
+
+  .header-logo {
+    width: 169px;
+  }
+
+  .login-box {
+    border-radius: 20px;
+    max-width: 100%;
+  }
+
+  .login-box-content {
+    padding: 30px 20px;
+  }
+
+  .login-header {
+    margin-bottom: 22px;
+  }
+
+  .header-decoration {
+    width: 50px;
+    margin-bottom: 12px;
   }
 
   .login-header h1 {
     font-size: 24px;
+    margin-bottom: 12px;
   }
 
-  .login-info-panel {
-    display: none;
+  .login-subtitle {
+    font-size: 13px;
+  }
+
+  .form-control {
+    padding: 13px 14px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
+
+  .btn-login {
+    padding: 14px 18px;
+    font-size: 13px;
+    border-radius: 10px;
+    margin-top: 6px;
+  }
+
+  .btn-support {
+    padding: 12px 16px;
+    font-size: 12px;
+    border-radius: 10px;
+  }
+
+  .form-label {
+    font-size: 12px;
+  }
+
+  .login-form {
+    gap: 14px;
+  }
+
+  .form-check {
+    gap: 10px;
   }
 }
 </style>

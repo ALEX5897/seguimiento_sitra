@@ -2,26 +2,54 @@ const pool = require('../db');
 const { enviarNotificacionDocumentos, formatearFecha } = require('./mailService');
 const { obtenerUsuarioPorId, obtenerUsuarioPorNombre } = require('../helpers/userHelper');
 
+async function obtenerConfiguracion() {
+  try {
+    const [config] = await pool.query(
+      'SELECT id, activo, hora_envio, dias_retraso FROM notificaciones_config WHERE id = 1'
+    );
+    return config[0] || { activo: true, hora_envio: '08:00', dias_retraso: 1 };
+  } catch (error) {
+    console.error('Error obteniendo configuración de notificaciones:', error.message);
+    return { activo: true, hora_envio: '08:00', dias_retraso: 1 };
+  }
+}
+
+async function obtenerPlantilla(tipo) {
+  try {
+    const [plantilla] = await pool.query(
+      'SELECT id, tipo, asunto, cuerpo_html FROM notificaciones_plantillas WHERE tipo = ?',
+      [tipo]
+    );
+    return plantilla[0] || null;
+  } catch (error) {
+    console.error('Error obteniendo plantilla de notificaciones:', error.message);
+    return null;
+  }
+}
+
 /**
- * Obtener documentos expirados (fecha_max_respuesta < hoy)
+ * Obtener documentos expirados (fecha_max_respuesta <= hoy - dias_retraso)
  */
 async function obtenerDocumentosExpirados() {
   try {
+    const config = await obtenerConfiguracion();
+    const diasRetraso = config.dias_retraso || 1;
+
     const connection = await pool.getConnection();
-    
+
     const query = `
-      SELECT 
-        id, numero_documento, tipo_documento, numero_tramite, 
+      SELECT
+        id, numero_documento, tipo_documento, numero_tramite,
         fecha_documento, fecha_reasignacion, fecha_max_respuesta,
         reasignado_a, usuario_id, correo_enviado_expiracion,
         remitente, destinatario, asunto, estado
       FROM reasignados
-      WHERE DATE(fecha_max_respuesta) < DATE(NOW())
+      WHERE DATE(fecha_max_respuesta) <= DATE(DATE_SUB(NOW(), INTERVAL ? DAY))
         AND estado NOT IN ('archivado', 'eliminado', 'enviado', 'cancelado', 'resuelto', 'completado')
       ORDER BY fecha_max_respuesta ASC
     `;
 
-    const [documentos] = await connection.query(query);
+    const [documentos] = await connection.query(query, [diasRetraso]);
     connection.release();
     return documentos || [];
   } catch (error) {
@@ -155,8 +183,15 @@ function agruparPorUsuario(documentos) {
  */
 async function procesarNotificacionesExpirados() {
   console.log('\n📧 [' + new Date().toLocaleString('es-ES') + '] Procesando documentos EXPIRADOS...');
-  
+
   try {
+    const config = await obtenerConfiguracion();
+
+    if (!config.activo) {
+      console.log('ℹ️ Notificaciones desactivadas en la configuración. Saltando...');
+      return { procesados: 0, enviados: 0, errores: 0 };
+    }
+
     const documentosExpirados = await obtenerDocumentosExpirados();
     console.log(`ℹ️ Total documentos expirados encontrados: ${documentosExpirados.length}`);
 
@@ -217,8 +252,15 @@ async function procesarNotificacionesExpirados() {
  */
 async function procesarNotificacionesUnDiaAntes() {
   console.log('\n📧 [' + new Date().toLocaleString('es-ES') + '] Procesando documentos PRÓXIMOS A EXPIRAR (1 día antes)...');
-  
+
   try {
+    const config = await obtenerConfiguracion();
+
+    if (!config.activo) {
+      console.log('ℹ️ Notificaciones desactivadas en la configuración. Saltando...');
+      return { procesados: 0, enviados: 0, errores: 0 };
+    }
+
     const docsProximos = await obtenerDocumentosProximosAExpirar();
     console.log(`ℹ️ Total documentos próximos a expirar encontrados: ${docsProximos.length}`);
 
@@ -415,6 +457,8 @@ async function marcarNotificacionComoLeida(notificacionId) {
 }
 
 module.exports = {
+  obtenerConfiguracion,
+  obtenerPlantilla,
   obtenerDocumentosExpirados,
   obtenerDocumentosProximosAExpirar,
   obtenerUsuario,

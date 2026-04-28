@@ -338,6 +338,118 @@ router.get('/keycloak/login', (req, res) => {
   res.json({ loginUrl });
 });
 
+// Helper: procesar token de Keycloak y crear sesión
+async function procesarTokenKeycloak(tokens, req) {
+  const userPayload = decodeJWT(tokens.access_token);
+
+  console.log('👤 Usuario de Keycloak:', userPayload.email);
+
+  const userInfo = {
+    id: userPayload.sub,
+    username: userPayload.preferred_username,
+    email: userPayload.email,
+    firstName: userPayload.given_name || '',
+    lastName: userPayload.family_name || '',
+    roles: userPayload.realm_access?.roles || [],
+    groups: userPayload.groups || []
+  };
+
+  const adminRole = process.env.KEYCLOAK_ROLE_ADMIN || 'admin';
+  const secretariaRole = process.env.KEYCLOAK_ROLE_SECRETARIA || 'secretaria';
+  const soloVistaRole = process.env.KEYCLOAK_ROLE_SOLO_VISTA || 'empleado';
+
+  let systemRole = 'solo_vista';
+  if (userInfo.roles.includes(adminRole)) {
+    systemRole = 'admin';
+  } else if (userInfo.roles.includes(secretariaRole)) {
+    systemRole = 'secretaria';
+  } else if (userInfo.roles.includes(soloVistaRole)) {
+    systemRole = 'solo_vista';
+  }
+
+  console.log('🔑 Rol mapeado:', systemRole, 'Roles Keycloak:', userInfo.roles);
+
+  const [usuarios] = await pool.query(
+    'SELECT id, correo, nombre, apellido, rol_id, estado, keycloak_id FROM usuarios_auth WHERE keycloak_id = ? OR correo = ?',
+    [userInfo.id, userInfo.email]
+  );
+
+  let usuario;
+
+  if (usuarios.length === 0) {
+    console.log('➕ Creando nuevo usuario:', userInfo.email);
+
+    const [roleRows] = await pool.query(
+      'SELECT id FROM roles WHERE nombre = ?',
+      [systemRole]
+    );
+
+    const rolId = roleRows.length > 0 ? roleRows[0].id : 1;
+
+    const [result] = await pool.query(
+      `INSERT INTO usuarios_auth (correo, nombre, apellido, keycloak_id, rol_id, estado)
+       VALUES (?, ?, ?, ?, ?, 'activo')`,
+      [userInfo.email, userInfo.firstName, userInfo.lastName, userInfo.id, rolId]
+    );
+
+    usuario = {
+      id: result.insertId,
+      correo: userInfo.email,
+      nombre: userInfo.firstName,
+      apellido: userInfo.lastName,
+      rol_id: rolId,
+      keycloak_id: userInfo.id
+    };
+  } else {
+    usuario = usuarios[0];
+    console.log('🔄 Usuario existente:', usuario.correo);
+
+    if (!usuario.keycloak_id) {
+      await pool.query(
+        'UPDATE usuarios_auth SET keycloak_id = ? WHERE id = ?',
+        [userInfo.id, usuario.id]
+      );
+    }
+
+    if (usuario.estado === 'bloqueado') {
+      console.log('🚫 Usuario bloqueado:', usuario.correo);
+      await registrarLoginFallido(userInfo.email, req, 'Usuario bloqueado');
+      throw new Error('Usuario bloqueado');
+    }
+  }
+
+  await pool.query(
+    `INSERT INTO audit_login (usuario_id, correo, ip_address, user_agent, login_exitoso)
+     VALUES (?, ?, ?, ?, true)`,
+    [usuario.id, userInfo.email, req.ip, req.get('user-agent')]
+  );
+
+  await pool.query(
+    'UPDATE usuarios_auth SET ultimo_login = NOW() WHERE id = ?',
+    [usuario.id]
+  );
+
+  const [roles] = await pool.query(
+    'SELECT nombre, permisos FROM roles WHERE id = ?',
+    [usuario.rol_id]
+  );
+
+  const rol = roles.length > 0 ? roles[0] : { nombre: systemRole, permisos: '{}' };
+  const permisos = parsePermisos(rol.permisos);
+
+  req.session.usuario = {
+    id: usuario.id,
+    correo: userInfo.email,
+    nombre: userInfo.firstName || usuario.nombre,
+    apellido: userInfo.lastName || usuario.apellido,
+    rol: rol.nombre,
+    permisos,
+    keycloak_id: userInfo.id
+  };
+
+  return req.session.usuario;
+}
+
 // GET /api/auth/keycloak/callback - Callback de Keycloak después del login
 router.get('/keycloak/callback', async (req, res) => {
   if (!isKeycloakEnabled()) {
@@ -349,192 +461,144 @@ router.get('/keycloak/callback', async (req, res) => {
 
     if (oauth_error) {
       console.error('❌ Error de OAuth desde Keycloak:', oauth_error);
-      
-      // Intentar detectar de dónde vino el request
+
       const protocol = req.get('x-forwarded-proto') || req.protocol || 'http';
       const host = req.get('x-forwarded-host') || req.get('host') || 'localhost:5175';
-      // Cambiar puerto de 3000 a 5175 si es necesario
       const frontendHost = host.replace(':3000', ':5175');
-      
+
       return res.redirect(`${protocol}://${frontendHost}/login?error=oauth_error`);
     }
 
     if (!code) {
       console.error('❌ No se recibió código de autorización');
-      
+
       const protocol = req.get('x-forwarded-proto') || req.protocol || 'http';
       const host = req.get('x-forwarded-host') || req.get('host') || 'localhost:5175';
       const frontendHost = host.replace(':3000', ':5175');
-      
+
       return res.redirect(`${protocol}://${frontendHost}/login?error=no_code`);
     }
 
     console.log('📝 Recibido código de autorización:', code.substring(0, 20) + '...');
 
-    // Intercambiar código por tokens
     const protocol = req.get('x-forwarded-proto') || req.protocol || 'http';
     const host = req.get('x-forwarded-host') || req.get('host') || 'localhost:3000';
     const callbackUrl = `${protocol}://${host}/api/auth/keycloak/callback`;
-    
-    console.log(`🔐 Keycloak callback - URL del callback: ${callbackUrl}`);
-    
-    const tokens = await exchangeCodeForToken(code, callbackUrl);
 
+    console.log(`🔐 Keycloak callback - URL del callback: ${callbackUrl}`);
+
+    const tokens = await exchangeCodeForToken(code, callbackUrl);
     console.log('✅ Tokens recibidos de Keycloak');
 
-    // Decodificar el access token para obtener información del usuario
-    const userPayload = decodeJWT(tokens.access_token);
-    
-    console.log('👤 Usuario de Keycloak:', userPayload.email);
+    await procesarTokenKeycloak(tokens, req);
 
-    const userInfo = {
-      id: userPayload.sub,
-      username: userPayload.preferred_username,
-      email: userPayload.email,
-      firstName: userPayload.given_name || '',
-      lastName: userPayload.family_name || '',
-      roles: userPayload.realm_access?.roles || [],
-      groups: userPayload.groups || []
-    };
-
-    // Mapear roles de Keycloak a roles del sistema
-    const adminRole = process.env.KEYCLOAK_ROLE_ADMIN || 'admin';
-    const secretariaRole = process.env.KEYCLOAK_ROLE_SECRETARIA || 'secretaria';
-    const soloVistaRole = process.env.KEYCLOAK_ROLE_SOLO_VISTA || 'empleado';
-
-    let systemRole = 'solo_vista'; // Por defecto
-    if (userInfo.roles.includes(adminRole)) {
-      systemRole = 'admin';
-    } else if (userInfo.roles.includes(secretariaRole)) {
-      systemRole = 'secretaria';
-    } else if (userInfo.roles.includes(soloVistaRole)) {
-      systemRole = 'solo_vista';
-    }
-
-    console.log('🔑 Rol mapeado:', systemRole, 'Roles Keycloak:', userInfo.roles);
-
-    // Buscar o crear usuario en la base de datos
-    const [usuarios] = await pool.query(
-      'SELECT id, correo, nombre, apellido, rol_id, estado, keycloak_id FROM usuarios_auth WHERE keycloak_id = ? OR correo = ?',
-      [userInfo.id, userInfo.email]
-    );
-
-    let usuario;
-    
-    if (usuarios.length === 0) {
-      console.log('➕ Creando nuevo usuario:', userInfo.email);
-      
-      // Crear nuevo usuario
-      const [roleRows] = await pool.query(
-        'SELECT id FROM roles WHERE nombre = ?',
-        [systemRole]
-      );
-
-      const rolId = roleRows.length > 0 ? roleRows[0].id : 1;
-
-      const [result] = await pool.query(
-        `INSERT INTO usuarios_auth (correo, nombre, apellido, keycloak_id, rol_id, estado)
-         VALUES (?, ?, ?, ?, ?, 'activo')`,
-        [userInfo.email, userInfo.firstName, userInfo.lastName, userInfo.id, rolId]
-      );
-
-      usuario = {
-        id: result.insertId,
-        correo: userInfo.email,
-        nombre: userInfo.firstName,
-        apellido: userInfo.lastName,
-        rol_id: rolId,
-        keycloak_id: userInfo.id
-      };
-    } else {
-      usuario = usuarios[0];
-      console.log('🔄 Usuario existente:', usuario.correo);
-
-      // Actualizar keycloak_id si no existe
-      if (!usuario.keycloak_id) {
-        await pool.query(
-          'UPDATE usuarios_auth SET keycloak_id = ? WHERE id = ?',
-          [userInfo.id, usuario.id]
-        );
-      }
-
-      // Verificar si está bloqueado
-      if (usuario.estado === 'bloqueado') {
-        console.log('🚫 Usuario bloqueado:', usuario.correo);
-        await registrarLoginFallido(userInfo.email, req, 'Usuario bloqueado');
-        
-        const protocolFE = req.get('x-forwarded-proto') || req.protocol || 'http';
-        const hostFE = req.get('x-forwarded-host') || req.get('host') || 'localhost:5175';
-        const frontendHost = hostFE.replace(':3000', ':5175');
-        
-        return res.redirect(`${protocolFE}://${frontendHost}/login?error=blocked`);
-      }
-    }
-
-    // Registrar login exitoso
-    await pool.query(
-      `INSERT INTO audit_login (usuario_id, correo, ip_address, user_agent, login_exitoso)
-       VALUES (?, ?, ?, ?, true)`,
-      [usuario.id, userInfo.email, req.ip, req.get('user-agent')]
-    );
-
-    // Actualizar último login
-    await pool.query(
-      'UPDATE usuarios_auth SET ultimo_login = NOW() WHERE id = ?',
-      [usuario.id]
-    );
-
-    // Obtener rol y permisos
-    const [roles] = await pool.query(
-      'SELECT nombre, permisos FROM roles WHERE id = ?',
-      [usuario.rol_id]
-    );
-
-    const rol = roles.length > 0 ? roles[0] : { nombre: systemRole, permisos: '{}' };
-    const permisos = parsePermisos(rol.permisos);
-
-    // Crear sesión
-    req.session.usuario = {
-      id: usuario.id,
-      correo: userInfo.email,
-      nombre: userInfo.firstName || usuario.nombre,
-      apellido: userInfo.lastName || usuario.apellido,
-      rol: rol.nombre,
-      permisos,
-      keycloak_id: userInfo.id
-    };
-
-    // Guardar sesión antes de redirigir
     req.session.save((err) => {
       if (err) {
         console.error('❌ Error guardando sesión:', err);
-        
+
         const protocolFE = req.get('x-forwarded-proto') || req.protocol || 'http';
         const hostFE = req.get('x-forwarded-host') || req.get('host') || 'localhost:5175';
         const frontendHost = hostFE.replace(':3000', ':5175');
-        
+
         return res.redirect(`${protocolFE}://${frontendHost}/login?error=session_error`);
       }
-      
-      console.log('✅ Sesión guardada para usuario:', userInfo.email, 'Session ID:', req.sessionID);
-      
-      // Redirigir al componente callback del frontend
+
+      console.log('✅ Sesión guardada para usuario:', req.session.usuario.correo, 'Session ID:', req.sessionID);
+
       const protocolFE = req.get('x-forwarded-proto') || req.protocol || 'http';
       const hostFE = req.get('x-forwarded-host') || req.get('host') || 'localhost:5175';
       const frontendHost = hostFE.replace(':3000', ':5175');
-      
+
       res.redirect(`${protocolFE}://${frontendHost}/auth/callback`);
     });
 
   } catch (error) {
     console.error('❌ Error en callback de Keycloak:', error.message);
-    console.error('Stack:', error.stack);
-    
+
     const protocolFE = req.get('x-forwarded-proto') || req.protocol || 'http';
     const hostFE = req.get('x-forwarded-host') || req.get('host') || 'localhost:5175';
     const frontendHost = hostFE.replace(':3000', ':5175');
-    
+
+    if (error.message === 'Usuario bloqueado') {
+      return res.redirect(`${protocolFE}://${frontendHost}/login?error=blocked`);
+    }
+
     res.redirect(`${protocolFE}://${frontendHost}/login?error=server_error`);
+  }
+});
+
+// POST /api/auth/keycloak/direct-login - Direct Access Grants (ROPC)
+router.post('/keycloak/direct-login', async (req, res) => {
+  if (!isKeycloakEnabled()) {
+    return res.status(400).json({ error: 'Keycloak no está habilitado' });
+  }
+
+  try {
+    const { usuario, contrasena } = req.body;
+
+    if (!usuario || !contrasena) {
+      return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+    }
+
+    const tokenUrl = `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/token`;
+
+    const params = new URLSearchParams({
+      grant_type: 'password',
+      client_id: process.env.KEYCLOAK_CLIENT_ID,
+      username: usuario,
+      password: contrasena,
+      scope: 'openid'
+    });
+
+    if (process.env.KEYCLOAK_CLIENT_SECRET) {
+      params.set('client_secret', process.env.KEYCLOAK_CLIENT_SECRET);
+    }
+
+    console.log(`🔐 Intentando direct login con usuario: ${usuario}`);
+
+    const tokenResponse = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
+
+    if (!tokenResponse.ok) {
+      const errData = await tokenResponse.json().catch(() => ({}));
+      console.warn('❌ Error de Keycloak (status:', tokenResponse.status + ')');
+      console.warn('   Error:', errData.error);
+      console.warn('   Descripción:', errData.error_description);
+      console.warn('   URL:', tokenUrl);
+      console.warn('   Client ID:', process.env.KEYCLOAK_CLIENT_ID);
+      await registrarLoginFallido(usuario, req, errData.error_description || 'Credenciales inválidas');
+      return res.status(401).json({ error: errData.error_description || 'Credenciales inválidas' });
+    }
+
+    const tokens = await tokenResponse.json();
+    console.log('✅ Tokens recibidos de Keycloak para direct login');
+
+    await procesarTokenKeycloak(tokens, req);
+
+    req.session.save((err) => {
+      if (err) {
+        console.error('❌ Error guardando sesión:', err);
+        return res.status(500).json({ error: 'Error al crear sesión' });
+      }
+
+      console.log('✅ Sesión guardada para usuario:', req.session.usuario.correo);
+      res.json({
+        success: true,
+        usuario: req.session.usuario
+      });
+    });
+
+  } catch (error) {
+    console.error('❌ Error en direct login:', error.message);
+
+    if (error.message === 'Usuario bloqueado') {
+      return res.status(403).json({ error: 'Usuario bloqueado' });
+    }
+
+    res.status(500).json({ error: error.message });
   }
 });
 

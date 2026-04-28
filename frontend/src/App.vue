@@ -3,7 +3,7 @@
     <!-- Desktop sidebar - Solo mostrar si está autenticado -->
     <aside v-if="authStore.isAuthenticated" class="bg-primary text-white d-none d-md-flex flex-column p-0 sidebar">
       <div class="d-flex align-items-center justify-content-center py-4 border-bottom border-secondary">
-        <center><span class="fs-4 fw-bold">SITRA</span> </center>
+        <span class="fs-4 fw-bold">SITRA</span>
       </div>
       <nav class="flex-grow-1 mt-4">
         <ul class="nav flex-column">
@@ -61,6 +61,12 @@
             <router-link to="/admin/usuarios" class="nav-link text-white d-flex align-items-center gap-2 ps-5">
               <i class="bi bi-people"></i>
               <span>Gestión de Usuarios</span>
+            </router-link>
+          </li>
+          <li v-if="authStore.isAdmin" class="nav-item">
+            <router-link to="/admin/notificaciones" class="nav-link text-white d-flex align-items-center gap-2 ps-5">
+              <i class="bi bi-bell"></i>
+              <span>Notificaciones</span>
             </router-link>
           </li>
         </ul>
