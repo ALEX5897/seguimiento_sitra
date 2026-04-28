@@ -12,11 +12,13 @@ const usuarios = require('./routes/usuarios');
 const estadisticas = require('./routes/estadisticas');
 const auth = require('./routes/auth');
 const admin = require('./routes/admin');
+const notificacionesConfig = require('./routes/notificaciones-config');
 const debug = require('./routes/debug');
 const comentarios = require('./routes/comentarios');
 const { verificarConexion } = require('./services/mailService');
-const { ejecutarTodasLasNotificaciones, procesarNotificacionesUnDiaAntes } = require('./services/notificationService');
+const { ejecutarTodasLasNotificaciones, procesarNotificacionesUnDiaAntes, obtenerConfiguracion } = require('./services/notificationService');
 const { initKeycloak, isKeycloakEnabled, getKeycloak } = require('./services/keycloakService');
+const { syncKeycloakUsers } = require('./services/keycloakSyncService');
 
 const app = express();
 
@@ -123,6 +125,7 @@ app.use('/api/usuarios', usuarios);
 app.use('/api/estadisticas', estadisticas);
 app.use('/api/auth', auth);
 app.use('/api/admin/usuarios', admin);
+app.use('/api/admin/notificaciones', notificacionesConfig);
 app.use('/api/debug', debug);
 app.use('/api', comentarios);
 
@@ -143,6 +146,44 @@ app.post('/api/test/notificaciones-proximos', async (req, res) => {
     res.json({ success: true, resultado });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Endpoint de prueba para sincronizar usuarios de Keycloak
+app.post('/api/test/sync-keycloak', async (req, res) => {
+  try {
+    const resultado = await syncKeycloakUsers();
+    res.json({ success: resultado.success, resultado });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Endpoint para ver estado de sincronización
+app.get('/api/admin/sync-status', async (req, res) => {
+  try {
+    const db = require('./db');
+
+    const [total] = await db.query('SELECT COUNT(*) as count FROM usuarios');
+    const [porEstado] = await db.query(
+      'SELECT estado, COUNT(*) as cantidad FROM usuarios GROUP BY estado'
+    );
+    const [conKeycloak] = await db.query(
+      'SELECT COUNT(*) as count FROM usuarios WHERE extra LIKE "%keycloakId%"'
+    );
+    const [gerencias] = await db.query(
+      'SELECT COUNT(DISTINCT gerencia) as count FROM usuarios WHERE gerencia IS NOT NULL'
+    );
+
+    res.json({
+      totalUsuarios: total[0].count,
+      porEstado,
+      sincronizadosKeycloak: conKeycloak[0].count,
+      gerenciasUnicas: gerencias[0].count,
+      listoParaSincronizar: conKeycloak[0].count < total[0].count
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -188,23 +229,98 @@ const server = app.listen(PORT, HOST, () => {
   verificarConexion().catch(err => console.error('Error SMTP inicial:', err));
 });
 
-// Configurar cronjob para ejecutar notificaciones diariamente
-// Ejecutar a las 08:00 (8 AM) cada día
-// Formato cron: segundo minuto hora día_mes mes día_semana
-const cronExpression = process.env.CRON_SCHEDULE || '0 8 * * *';
-cron.schedule(cronExpression, async () => {
-  console.log('\n🔔 [CRONJOB] Iniciando verificación de documentos...');
-  await ejecutarTodasLasNotificaciones();
-}, {
-  scheduled: true,
-  timezone: 'America/Guayaquil'
-});
+// Variables globales para guardar las tareas de cron
+let cronTaskNotificaciones = null;
+let cronTaskSyncKeycloak = null;
 
-console.log(`⏰ Cronjob programado: ${cronExpression} (Ecuador)`);
+async function iniciarCron() {
+  try {
+    const config = await obtenerConfiguracion();
+    const [hh, mm] = (config.hora_envio || '08:00').split(':');
+    const cronExpressionNotificaciones = `${mm} ${hh} * * *`;
+
+    // Calcular hora de sincronización 30 minutos antes
+    let syncHh = parseInt(hh);
+    let syncMm = parseInt(mm) - 30;
+    if (syncMm < 0) {
+      syncMm += 60;
+      syncHh -= 1;
+    }
+    if (syncHh < 0) syncHh = 23;
+    const cronExpressionSync = `${String(syncMm).padStart(2, '0')} ${String(syncHh).padStart(2, '0')} * * *`;
+
+    if (cronTaskNotificaciones) {
+      cronTaskNotificaciones.stop();
+      cronTaskNotificaciones = null;
+    }
+
+    if (cronTaskSyncKeycloak) {
+      cronTaskSyncKeycloak.stop();
+      cronTaskSyncKeycloak = null;
+    }
+
+    // Tarea de sincronización de Keycloak
+    cronTaskSyncKeycloak = cron.schedule(cronExpressionSync, async () => {
+      console.log('\n🔄 [CRONJOB] Sincronizando usuarios de Keycloak...');
+      try {
+        await syncKeycloakUsers();
+      } catch (error) {
+        console.error('❌ Error en sincronización de Keycloak:', error.message);
+      }
+    }, {
+      scheduled: true,
+      timezone: process.env.TIMEZONE || 'America/Guayaquil'
+    });
+
+    // Tarea de notificaciones
+    cronTaskNotificaciones = cron.schedule(cronExpressionNotificaciones, async () => {
+      console.log('\n🔔 [CRONJOB] Iniciando verificación de documentos...');
+      await ejecutarTodasLasNotificaciones();
+    }, {
+      scheduled: true,
+      timezone: process.env.TIMEZONE || 'America/Guayaquil'
+    });
+
+    console.log(`⏰ Cronjob de Keycloak programado: ${cronExpressionSync} (Ecuador)`);
+    console.log(`⏰ Cronjob de notificaciones programado: ${cronExpressionNotificaciones} (Ecuador)`);
+  } catch (error) {
+    console.error('❌ Error inicializando cron:', error.message);
+    // Fallback con horas por defecto
+    const syncExpressionFallback = '30 7 * * *';
+    const notifyExpressionFallback = '0 8 * * *';
+
+    cronTaskSyncKeycloak = cron.schedule(syncExpressionFallback, async () => {
+      console.log('\n🔄 [CRONJOB] Sincronizando usuarios de Keycloak...');
+      try {
+        await syncKeycloakUsers();
+      } catch (error) {
+        console.error('❌ Error en sincronización de Keycloak:', error.message);
+      }
+    }, {
+      scheduled: true,
+      timezone: process.env.TIMEZONE || 'America/Guayaquil'
+    });
+
+    cronTaskNotificaciones = cron.schedule(notifyExpressionFallback, async () => {
+      console.log('\n🔔 [CRONJOB] Iniciando verificación de documentos...');
+      await ejecutarTodasLasNotificaciones();
+    }, {
+      scheduled: true,
+      timezone: process.env.TIMEZONE || 'America/Guayaquil'
+    });
+    console.log(`⏰ Cronjob de Keycloak programado (fallback): ${syncExpressionFallback} (Ecuador)`);
+    console.log(`⏰ Cronjob de notificaciones programado (fallback): ${notifyExpressionFallback} (Ecuador)`);
+  }
+}
+
+// Iniciar cron después de conectar a la BD
+iniciarCron();
 
 // Manejo seguro de cierre
 process.on('SIGINT', () => {
   console.log('\n\n👋 Cerrando servidor...');
+  if (cronTaskNotificaciones) cronTaskNotificaciones.stop();
+  if (cronTaskSyncKeycloak) cronTaskSyncKeycloak.stop();
   server.close(() => {
     console.log('✅ Servidor cerrado correctamente');
     process.exit(0);
