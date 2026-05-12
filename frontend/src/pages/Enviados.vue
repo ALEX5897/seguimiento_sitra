@@ -313,6 +313,7 @@ export default {
           item.numero_documento,
           item.remitente,
           item.para,
+          item.correo,
           item.asunto,
           item.tipo_documento,
           item.no_referencia,

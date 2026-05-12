@@ -424,6 +424,7 @@ export default {
           item.numero_documento,
           item.tipo_documento,
           item.reasignado_a,
+          item.correo,
           item.estado,
           item.asunto,
           item.remitente,

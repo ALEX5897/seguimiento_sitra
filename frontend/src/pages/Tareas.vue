@@ -282,6 +282,7 @@ export default {
         const texto = [
           item.numero_documento,
           item.asignado_para,
+          item.correo,
           item.estado,
           item.descripcion,
           item.avance,
