@@ -43,7 +43,8 @@
       "Bash(Get-Process -ErrorAction SilentlyContinue)",
       "Bash(grep -n \"^  }$\" \"C:\\\\Users\\\\acasa\\\\OneDrive - QuitoTurismo\\\\Documentos\\\\Desarrollo\\\\Sis_asignacion de memos\\\\seguimiento_sitra\\\\frontend\\\\src\\\\pages\\\\Reasignados.vue\")",
       "Bash(node backend/seed_acasa_test.js)",
-      "Bash(node backend/ejecutar_migracion_catalogo.js)"
+      "Bash(node backend/ejecutar_migracion_catalogo.js)",
+      "Bash(node backend/verificar_catalogo.js)"
     ]
   }
 }
