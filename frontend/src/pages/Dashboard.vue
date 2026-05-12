@@ -28,16 +28,6 @@
 
     <!-- KPIs Detallados de Reasignados -->
     <div class="row mb-5">
-      <!-- Tasa de Cumplimiento -->
-      <div class="col-lg-3 col-md-6 mb-4">
-        <div class="kpi-card cumplimiento">
-          <div class="kpi-icon">✅</div>
-          <div class="kpi-title">Tasa de Cumplimiento</div>
-          <div class="kpi-number" :class="kpiReasignados.tasa_cumplimiento >= 80 ? '' : kpiReasignados.tasa_cumplimiento >= 50 ? 'text-warning-kpi' : 'text-danger-kpi'">{{ kpiReasignados.tasa_cumplimiento }}%</div>
-          <small class="kpi-subtitle">{{ kpiReasignados.resueltos }} de {{ kpiReasignados.total }} resueltos</small>
-        </div>
-      </div>
-
       <!-- Documentos Pendientes -->
       <div class="col-lg-3 col-md-6 mb-4">
         <div class="kpi-card pendientes">
@@ -65,36 +55,6 @@
           <div class="kpi-title">Próximos a Vencer</div>
           <div class="kpi-number">{{ kpiReasignados.proximosVencer }}</div>
           <small class="kpi-subtitle">En 24 horas</small>
-        </div>
-      </div>
-
-      <!-- Documentos Resueltos -->
-      <div class="col-lg-3 col-md-6 mb-4">
-        <div class="kpi-card resueltos">
-          <div class="kpi-icon">🎯</div>
-          <div class="kpi-title">Resueltos</div>
-          <div class="kpi-number">{{ kpiReasignados.resueltos }}</div>
-          <small class="kpi-subtitle">Con respuesta registrada</small>
-        </div>
-      </div>
-
-      <!-- Tiempo Promedio de Respuesta -->
-      <div class="col-lg-3 col-md-6 mb-4">
-        <div class="kpi-card tiempopromedio">
-          <div class="kpi-icon">⏱️</div>
-          <div class="kpi-title">Tiempo Promedio</div>
-          <div class="kpi-number">{{ kpiReasignados.tiempoPromedioRespuesta }} <small style="font-size: 0.5em;">días</small></div>
-          <small class="kpi-subtitle">({{ kpiReasignados.documentosResueltos }} documentos)</small>
-        </div>
-      </div>
-
-      <!-- Total Reasignados -->
-      <div class="col-lg-3 col-md-6 mb-4">
-        <div class="kpi-card total">
-          <div class="kpi-icon">📊</div>
-          <div class="kpi-title">Total</div>
-          <div class="kpi-number">{{ kpiReasignados.total }}</div>
-          <small class="kpi-subtitle">Todos los estados</small>
         </div>
       </div>
     </div>
@@ -553,10 +513,6 @@ export default {
   background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
 }
 
-.kpi-card.cumplimiento {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
 .kpi-card.pendientes {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
@@ -567,18 +523,6 @@ export default {
 
 .kpi-card.proximosvencer {
   background: linear-gradient(135deg, #f5a623 0%, #f8a100 100%);
-}
-
-.kpi-card.resueltos {
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-}
-
-.kpi-card.tiempopromedio {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.kpi-card.total {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .kpi-subtitle {
