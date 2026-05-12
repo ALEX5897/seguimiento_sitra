@@ -15,6 +15,7 @@ const admin = require('./routes/admin');
 const notificacionesConfig = require('./routes/notificaciones-config');
 const debug = require('./routes/debug');
 const comentarios = require('./routes/comentarios');
+const catalogos = require('./routes/catalogos');
 const { verificarConexion } = require('./services/mailService');
 const { ejecutarTodasLasNotificaciones, procesarNotificacionesUnDiaAntes, obtenerConfiguracion } = require('./services/notificationService');
 const { initKeycloak, isKeycloakEnabled, getKeycloak } = require('./services/keycloakService');
@@ -126,6 +127,7 @@ app.use('/api/estadisticas', estadisticas);
 app.use('/api/auth', auth);
 app.use('/api/admin/usuarios', admin);
 app.use('/api/admin/notificaciones', notificacionesConfig);
+app.use('/api/catalogos', catalogos);
 app.use('/api/debug', debug);
 app.use('/api', comentarios);
 
