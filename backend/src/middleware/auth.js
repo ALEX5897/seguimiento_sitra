@@ -41,16 +41,21 @@ function requireRole(...roles) {
  * Verifica solo que sea admin
  */
 function requireAdmin(req, res, next) {
-  const usuario = req.session?.usuario;
-  
+  const usuario = req.session?.usuario || req.user;
+
   if (!usuario) {
+    console.log('⚠️ No hay usuario en session ni en req.user');
+    console.log('   req.session:', req.session);
+    console.log('   req.user:', req.user);
     return res.status(401).json({ error: 'No autenticado' });
   }
-  
-  if (usuario.rol !== 'admin') {
+
+  const userRole = usuario.rol || usuario.role;
+  if (userRole !== 'admin') {
+    console.log(`⚠️ Usuario no es admin. Rol: ${userRole}`);
     return res.status(403).json({ error: 'Requiere permisos de administrador' });
   }
-  
+
   req.usuarioAuth = usuario;
   next();
 }
@@ -89,10 +94,18 @@ async function getUserIdFromCorreo(db, correo) {
   }
 }
 
+/**
+ * Alias para requireAdmin (compatible con diferentes nombres)
+ */
+function isAdmin(req, res, next) {
+  return requireAdmin(req, res, next);
+}
+
 module.exports = {
   requireAuth,
   requireRole,
   requireAdmin,
+  isAdmin,
   canViewAll,
   getUserIdFromCorreo
 };

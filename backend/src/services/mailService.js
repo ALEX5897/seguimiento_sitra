@@ -60,6 +60,20 @@ const transporter = nodemailer.createTransport({
  * @param {Object} plantillaPersonalizada - Plantilla personalizada {asunto, cuerpo_html}
  */
 async function enviarNotificacionDocumentos(usuario, documentos, tipo = 'expirado', plantillaPersonalizada = null) {
+  try {
+    // Verificar si las notificaciones por correo están activas
+    const db = require('../db');
+    const [config] = await db.query('SELECT notificaciones_email_activas FROM notificaciones_config WHERE id = 1');
+
+    if (config[0] && !config[0].notificaciones_email_activas) {
+      console.log('ℹ️ Notificaciones por correo desactivadas. No se envió correo de documentos.');
+      return false;
+    }
+  } catch (error) {
+    console.error('⚠️ Error verificando configuración de notificaciones:', error.message);
+    // Continuar de todas formas en caso de error
+  }
+
   const destinatarioOverride = notificationTestEmail && notificationTestEmail.trim();
   const correoUsuario = usuario && usuario.correo ? String(usuario.correo).trim() : '';
   const nombreUsuario = usuario && usuario.nombre ? usuario.nombre : 'Usuario';
@@ -207,6 +221,28 @@ async function enviarNotificacionDocumentos(usuario, documentos, tipo = 'expirad
 }
 
 /**
+ * Enviar correo genérico
+ */
+async function enviarCorreo(destinatario, asunto, html, options = {}) {
+  try {
+    const mailOptions = {
+      from: `"SISTRA - Sistema de Gestión" <${emailFrom}>`,
+      to: destinatario,
+      subject: asunto,
+      html,
+      ...options
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Correo enviado a ${destinatario} - Message ID: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    console.error(`❌ Error enviando correo genérico a ${destinatario}:`, error.message);
+    throw error;
+  }
+}
+
+/**
  * Generar tabla HTML con detalles de documentos
  */
 function generarTablaHTML(documentos, estado) {
@@ -299,6 +335,20 @@ testSMTP();
  * @param {Object} datos - {destinatario, nombre, documento, comentador, contenido, tipoUsuario}
  */
 async function enviarNotificacionComentario(datos) {
+  try {
+    // Verificar si las notificaciones por correo están activas
+    const db = require('../db');
+    const [config] = await db.query('SELECT notificaciones_email_activas FROM notificaciones_config WHERE id = 1');
+
+    if (config[0] && !config[0].notificaciones_email_activas) {
+      console.log('ℹ️ Notificaciones por correo desactivadas. No se envió correo de comentario.');
+      return false;
+    }
+  } catch (error) {
+    console.error('⚠️ Error verificando configuración de notificaciones:', error.message);
+    // Continuar de todas formas en caso de error
+  }
+
   const destinatarioOverride = notificationTestEmail && notificationTestEmail.trim();
   const destinatario = destinatarioOverride || (datos.destinatario || '').trim();
 
@@ -385,6 +435,20 @@ async function enviarNotificacionComentario(datos) {
  * @param {Object} datos - {destinatario, nombre, documento, estadoAnterior, estadoNuevo, actor}
  */
 async function enviarNotificacionCambioEstado(datos) {
+  try {
+    // Verificar si las notificaciones por correo están activas
+    const db = require('../db');
+    const [config] = await db.query('SELECT notificaciones_email_activas FROM notificaciones_config WHERE id = 1');
+
+    if (config[0] && !config[0].notificaciones_email_activas) {
+      console.log('ℹ️ Notificaciones por correo desactivadas. No se envió cambio de estado.');
+      return false;
+    }
+  } catch (error) {
+    console.error('⚠️ Error verificando configuración de notificaciones:', error.message);
+    // Continuar de todas formas en caso de error
+  }
+
   const destinatarioOverride = notificationTestEmail && notificationTestEmail.trim();
   const destinatario = destinatarioOverride || (datos.destinatario || '').trim();
 
@@ -465,6 +529,7 @@ module.exports = {
   enviarNotificacionDocumentos,
   enviarNotificacionComentario,
   enviarNotificacionCambioEstado,
+  enviarCorreo,
   generarTablaHTML,
   formatearFecha,
   reemplazarVariables,

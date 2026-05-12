@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <!-- Buscador Global -->
+    <!-- Filtros Activos y Buscador Global -->
     <div class="row mb-3 align-items-center">
       <div class="col-md-6">
         <div class="input-group">
@@ -35,6 +35,12 @@
         </div>
       </div>
       <div class="col-md-6 text-end text-muted small">
+        <div v-if="filtroActivo" class="mb-2">
+          <span class="badge bg-primary me-2">
+            {{ filtroActivo }}
+            <button @click="limpiarFiltro" class="btn-close btn-close-white ms-2" style="width: 0.6rem; height: 0.6rem;"></button>
+          </span>
+        </div>
         {{ itemsFiltrados.length }} resultado(s)
         <span v-if="busqueda"> para "<strong>{{ busqueda }}</strong>"</span>
       </div>
@@ -380,14 +386,21 @@ export default {
       pastedData: '',
       busqueda: '',
       paginaActual: 1,
-      porPagina: 15
+      porPagina: 15,
+      filtroTipo: null,
+      filtroActivo: null
     }
   },
-  mounted() { 
+  mounted() {
     this.refreshHandler = () => this.load();
     window.addEventListener('sistra:data-updated', this.refreshHandler);
     this.cargarUsuarioActual()
     this.load().then(() => {
+      // Aplicar filtro si viene en query params
+      const filtro = this.$route.query.filtro
+      if (filtro) {
+        this.aplicarFiltro(filtro)
+      }
       // Auto-abrir documento si viene de notificación
       const docId = this.$route.query.doc
       if (docId) {
@@ -406,6 +419,14 @@ export default {
         this.abrirDocumentoPorId(newDocId)
       }
     },
+    '$route.query.filtro'(newFiltro) {
+      if (newFiltro) {
+        this.aplicarFiltro(newFiltro)
+      } else {
+        this.filtroTipo = null
+        this.filtroActivo = null
+      }
+    },
     busqueda() {
       this.paginaActual = 1
     }
@@ -417,9 +438,43 @@ export default {
     },
     expiredItems() { return this.items.filter(i => this.isExpired(i)); },
     itemsFiltrados() {
-      if (!this.busqueda.trim()) return this.items
+      let result = this.items
+
+      // Aplicar filtro por tipo (vencidos, pendientes, etc)
+      if (this.filtroTipo) {
+        result = result.filter(item => {
+          const now = new Date()
+          const estado = (item.estado || '').toString().toLowerCase().trim()
+          const isExcluded = ['archivado', 'eliminado', 'enviado', 'completado', 'resuelto', 'cancelado'].includes(estado)
+
+          switch (this.filtroTipo) {
+            case 'vencidos':
+              if (!item.fecha_max_respuesta) return false
+              const isExpired = new Date(item.fecha_max_respuesta) < now
+              return isExpired && !isExcluded && (estado === 'pendiente' || estado === 'en_proceso')
+            case 'proximosvencer':
+              if (!item.fecha_max_respuesta) return false
+              const timeLeft = new Date(item.fecha_max_respuesta) - now
+              const hoursLeft = timeLeft / (1000 * 60 * 60)
+              return hoursLeft > 0 && hoursLeft <= 24 && !isExcluded && (estado === 'pendiente' || estado === 'en_proceso')
+            case 'pendientes':
+              return estado === 'pendiente'
+            case 'en_proceso':
+              return estado === 'en_proceso'
+            case 'resuelto':
+              return estado === 'resuelto'
+            case 'archivado':
+              return estado === 'archivado'
+            default:
+              return true
+          }
+        })
+      }
+
+      // Aplicar filtro de búsqueda de texto
+      if (!this.busqueda.trim()) return result
       const t = normalizarTexto(this.busqueda)
-      return this.items.filter(item => {
+      return result.filter(item => {
         const texto = [
           item.numero_documento,
           item.tipo_documento,
@@ -823,6 +878,29 @@ export default {
           console.error('Error cargando documento:', error)
         }
       }
+    },
+
+    aplicarFiltro(tipo) {
+      this.filtroTipo = tipo
+      this.paginaActual = 1
+
+      const etiquetas = {
+        'vencidos': '⛔ Vencidos',
+        'proximosvencer': '⚠️ Próximos a Vencer',
+        'pendientes': '⏳ Pendientes',
+        'en_proceso': '🔄 En Proceso',
+        'resuelto': '✓ Resueltos',
+        'archivado': '📦 Archivados'
+      }
+
+      this.filtroActivo = etiquetas[tipo] || tipo
+    },
+
+    limpiarFiltro() {
+      this.filtroTipo = null
+      this.filtroActivo = null
+      this.paginaActual = 1
+      this.$router.replace({ query: {} })
     }
   }
 }

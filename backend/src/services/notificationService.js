@@ -5,12 +5,24 @@ const { obtenerUsuarioPorId, obtenerUsuarioPorNombre } = require('../helpers/use
 async function obtenerConfiguracion() {
   try {
     const [config] = await pool.query(
-      'SELECT id, activo, hora_envio, dias_retraso FROM notificaciones_config WHERE id = 1'
+      'SELECT id, activo, hora_envio, dias_retraso, notificaciones_email_activas, notificaciones_app_activas FROM notificaciones_config WHERE id = 1'
     );
-    return config[0] || { activo: true, hora_envio: '08:00', dias_retraso: 1 };
+    return config[0] || {
+      activo: true,
+      hora_envio: '08:00',
+      dias_retraso: 1,
+      notificaciones_email_activas: true,
+      notificaciones_app_activas: true
+    };
   } catch (error) {
     console.error('Error obteniendo configuración de notificaciones:', error.message);
-    return { activo: true, hora_envio: '08:00', dias_retraso: 1 };
+    return {
+      activo: true,
+      hora_envio: '08:00',
+      dias_retraso: 1,
+      notificaciones_email_activas: true,
+      notificaciones_app_activas: true
+    };
   }
 }
 
@@ -192,6 +204,11 @@ async function procesarNotificacionesExpirados() {
       return { procesados: 0, enviados: 0, errores: 0 };
     }
 
+    if (!config.notificaciones_email_activas) {
+      console.log('ℹ️ Notificaciones por correo desactivadas. Saltando...');
+      return { procesados: 0, enviados: 0, errores: 0 };
+    }
+
     const documentosExpirados = await obtenerDocumentosExpirados();
     console.log(`ℹ️ Total documentos expirados encontrados: ${documentosExpirados.length}`);
 
@@ -258,6 +275,11 @@ async function procesarNotificacionesUnDiaAntes() {
 
     if (!config.activo) {
       console.log('ℹ️ Notificaciones desactivadas en la configuración. Saltando...');
+      return { procesados: 0, enviados: 0, errores: 0 };
+    }
+
+    if (!config.notificaciones_email_activas) {
+      console.log('ℹ️ Notificaciones por correo desactivadas. Saltando...');
       return { procesados: 0, enviados: 0, errores: 0 };
     }
 
@@ -343,6 +365,14 @@ async function ejecutarTodasLasNotificaciones() {
  */
 async function crearNotificacionSistema(datos) {
   try {
+    // Verificar si las notificaciones de la app están activas
+    const config = await obtenerConfiguracion();
+
+    if (!config.notificaciones_app_activas) {
+      console.log('ℹ️ Notificaciones de la app desactivadas. No se creó notificación del sistema.');
+      return null;
+    }
+
     const {
       usuario_id,
       correo_usuario,
@@ -372,10 +402,10 @@ async function crearNotificacionSistema(datos) {
     }
 
     const [result] = await pool.query(
-      `INSERT INTO notificaciones_sistema 
-      (usuario_id, correo_usuario, reasignado_id, comentario_id, tipo_notificacion, titulo, mensaje, urlAccion, leida) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, false)`,
-      [usuario_id, correo_usuario, reasignado_id, comentario_id, tipo_notificacion, titulo, mensaje, urlAccion || '']
+      `INSERT INTO notificaciones_sistema
+      (usuario_id, correo_usuario, reasignado_id, comentario_id, tipo_notificacion, titulo, mensaje, urlAccion, leida)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [usuario_id, correo_usuario, reasignado_id, comentario_id, tipo_notificacion, titulo, mensaje, urlAccion || '', false]
     );
 
     console.log(`✅ Notificación creada: ${titulo} - ID: ${result.insertId}`);
@@ -456,6 +486,97 @@ async function marcarNotificacionComoLeida(notificacionId) {
   }
 }
 
+/**
+ * Enviar correo de prueba
+ */
+async function enviarCorreoPrueba(emailDestino) {
+  try {
+    const { enviarCorreo } = require('./mailService');
+
+    const asunto = 'SITRA - Correo de Prueba';
+    const cuerpoHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #007bff;">Correo de Prueba - SITRA</h2>
+        <p>Este es un correo de prueba enviado desde el sistema SITRA.</p>
+        <p><strong>Fecha de envío:</strong> ${new Date().toLocaleString('es-ES')}</p>
+        <p>Si recibió este correo, significa que la configuración de notificaciones por correo está funcionando correctamente.</p>
+        <hr>
+        <p style="color: #666; font-size: 12px;">
+          Este es un mensaje automático del Sistema de Seguimiento de Trámites Administrativos (SITRA).
+        </p>
+      </div>
+    `;
+
+    const resultado = await enviarCorreo(emailDestino, asunto, cuerpoHtml);
+
+    // Registrar en el log
+    await pool.query(
+      'INSERT INTO notificaciones_log (tipo, email_destino, estado, detalles) VALUES (?, ?, ?, ?)',
+      ['correo_prueba', emailDestino, 'enviado', JSON.stringify(resultado)]
+    );
+
+    return resultado;
+  } catch (error) {
+    console.error('Error enviando correo de prueba:', error);
+
+    // Registrar error en el log
+    await pool.query(
+      'INSERT INTO notificaciones_log (tipo, email_destino, estado, detalles) VALUES (?, ?, ?, ?)',
+      ['correo_prueba', emailDestino, 'error', error.message]
+    );
+
+    throw error;
+  }
+}
+
+/**
+ * Ejecutar notificaciones manualmente según filtros
+ */
+async function ejecutarNotificacionesManual(filtros) {
+  try {
+    console.log('🚀 Iniciando envío manual de notificaciones...');
+
+    let correos_enviados = 0;
+    let notificaciones_creadas = 0;
+
+    const config = await obtenerConfiguracion();
+
+    // Procesar documentos expirados si está seleccionado
+    if (filtros.documentosExpirados) {
+      console.log('📋 Procesando documentos expirados...');
+      const resultado = await procesarNotificacionesExpirados();
+      correos_enviados += resultado.correos || 0;
+      notificaciones_creadas += resultado.notificaciones || 0;
+    }
+
+    // Procesar documentos próximos a expirar si está seleccionado
+    if (filtros.documentosProximos) {
+      console.log('⏰ Procesando documentos próximos a expirar...');
+      const resultado = await procesarNotificacionesUnDiaAntes();
+      correos_enviados += resultado.correos || 0;
+      notificaciones_creadas += resultado.notificaciones || 0;
+    }
+
+    // Registrar en log
+    await pool.query(
+      `INSERT INTO notificaciones_log (tipo, cantidad_enviados, cantidad_notificaciones, fecha_envio, estado)
+       VALUES (?, ?, ?, NOW(), 'completado')`,
+      ['notificaciones_manuales', correos_enviados, notificaciones_creadas]
+    ).catch(err => console.error('Error registrando en log:', err));
+
+    console.log(`✅ Notificaciones enviadas: ${correos_enviados} correos, ${notificaciones_creadas} notificaciones`);
+
+    return {
+      correos_enviados,
+      notificaciones_creadas,
+      mensaje: `Se envió exitosamente a ${correos_enviados} usuarios`
+    };
+  } catch (error) {
+    console.error('❌ Error en ejecutarNotificacionesManual:', error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   obtenerConfiguracion,
   obtenerPlantilla,
@@ -471,5 +592,7 @@ module.exports = {
   crearNotificacionSistema,
   obtenerNotificacionesUsuario,
   contarNotificacionesSinLeer,
-  marcarNotificacionComoLeida
+  marcarNotificacionComoLeida,
+  enviarCorreoPrueba,
+  ejecutarNotificacionesManual
 };

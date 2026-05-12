@@ -241,23 +241,23 @@ export default {
   padding: 20px;
 }
 
-.preview-content ::v-deep {
+.preview-content :deep(*) {
   background: white;
   padding: 15px;
   border-radius: 4px;
 }
 
-.preview-content ::v-deep table {
+.preview-content :deep(table) {
   margin: 10px 0 !important;
 }
 
-.preview-content ::v-deep th,
-.preview-content ::v-deep td {
+.preview-content :deep(th),
+.preview-content :deep(td) {
   padding: 8px !important;
   border: 1px solid #ddd !important;
 }
 
-.preview-content ::v-deep th {
+.preview-content :deep(th) {
   background: #f0f0f0 !important;
 }
 </style>

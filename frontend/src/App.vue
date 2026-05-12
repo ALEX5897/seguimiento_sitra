@@ -1,9 +1,12 @@
 <template>
   <div class="d-flex min-vh-100 bg-light app-shell">
-    <!-- Desktop sidebar - Solo mostrar si está autenticado -->
-    <aside v-if="authStore.isAuthenticated" class="bg-primary text-white d-none d-md-flex flex-column p-0 sidebar">
-      <div class="d-flex align-items-center justify-content-center py-4 border-bottom border-secondary">
+    <!-- Sidebar principal - Toggleable en todas las pantallas -->
+    <aside v-if="authStore.isAuthenticated" v-show="showSidebar" class="bg-primary text-white flex-column p-0 sidebar position-fixed start-0 top-0 vh-100" :class="{ 'd-md-flex': showSidebar }" style="z-index: 1050; width: 250px;">
+      <div class="d-flex align-items-center justify-content-between py-4 border-bottom border-secondary px-3">
         <span class="fs-4 fw-bold">SITRA</span>
+        <button class="btn btn-link text-white p-0" @click="showSidebar = false">
+          <i class="bi bi-x-lg fs-4"></i>
+        </button>
       </div>
       <nav class="flex-grow-1 mt-4">
         <ul class="nav flex-column">
@@ -69,17 +72,25 @@
               <span>Notificaciones</span>
             </router-link>
           </li>
+          <li v-if="authStore.isAdmin" class="nav-item">
+            <router-link to="/carga-masiva" class="nav-link text-white d-flex align-items-center gap-2 ps-5">
+              <i class="bi bi-cloud-upload"></i>
+              <span>Carga Masiva</span>
+            </router-link>
+          </li>
         </ul>
       </nav>
       <div class="mt-auto p-3 text-center text-warning fw-semibold">Quito Turismo © 2026</div>
     </aside>
 
     <!-- Main content -->
-    <div class="flex-grow-1 d-flex flex-column">
+    <div class="flex-grow-1 d-flex flex-column" :style="{ marginLeft: showSidebar && isDesktop ? '250px' : '0px', transition: 'margin-left 0.3s' }">
       <!-- Header - Solo mostrar si está autenticado -->
       <header v-if="authStore.isAuthenticated" class="bg-white shadow-sm p-3 d-flex align-items-center justify-content-between app-header">
         <div class="d-flex align-items-center">
-          <button class="btn btn-link d-md-none me-2" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu">☰</button>
+          <button class="btn btn-link me-2" @click="showSidebar = !showSidebar">
+            <i class="bi bi-list fs-4"></i>
+          </button>
           <img :src="logo" alt="Logo" class="app-logo me-3" />
           <div>
             <h2 class="h5 mb-0">Seguimiento Documental</h2>
@@ -142,32 +153,6 @@
       </main>
     </div>
 
-    <!-- Mobile offcanvas menu -->
-    <div v-if="authStore.isAuthenticated" class="offcanvas offcanvas-start" tabindex="-1" id="mobileMenu">
-      <div class="offcanvas-header">
-        <h5 class="offcanvas-title">Menu</h5>
-        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
-      </div>
-      <div class="offcanvas-body">
-        <div class="mb-4 d-flex align-items-center gap-2">
-          <strong>{{ authStore.usuarioNombre }}</strong>
-          <span class="badge bg-primary">{{ authStore.usuarioRol }}</span>
-        </div>
-        <nav>
-          <ul class="list-unstyled">
-            <li class="mb-2"><router-link to="/dashboard" class="d-block" data-bs-dismiss="offcanvas">Dashboard</router-link></li>
-            <li class="mb-2"><router-link to="/reasignados" class="d-block" data-bs-dismiss="offcanvas">Reasignados</router-link></li>
-            <li class="mb-2"><router-link to="/tareas" class="d-block" data-bs-dismiss="offcanvas">Tareas</router-link></li>
-            <li class="mb-2"><router-link to="/enviados" class="d-block" data-bs-dismiss="offcanvas">Enviados</router-link></li>
-            <li v-if="authStore.isAdmin" class="mb-2"><router-link to="/admin/usuarios" class="d-block" data-bs-dismiss="offcanvas">Gestión de Usuarios</router-link></li>
-            <li class="mb-2 border-top pt-2">
-              <a href="#" @click.prevent="handleLogout" class="d-block text-danger">Cerrar Sesión</a>
-            </li>
-          </ul>
-        </nav>
-      </div>
-    </div>
-
     <!-- Modal de resultados de carga masiva -->
     <modal-resultados-carga ref="modalResultados" />
   </div>
@@ -195,7 +180,9 @@ export default {
   data() {
     return { 
       logo,
-      isUploading: false
+      isUploading: false,
+      showSidebar: true,
+      isDesktop: window.innerWidth >= 768
     }
   },
   methods: {
@@ -246,6 +233,18 @@ export default {
         await this.authStore.logout();
         this.$router.push('/login');
       }
+    }
+  },
+  mounted() {
+    this.updateIsDesktop();
+    window.addEventListener('resize', this.updateIsDesktop);
+  },
+  beforeUnmount() {
+    window.removeEventListener('resize', this.updateIsDesktop);
+  },
+  methods: {
+    updateIsDesktop() {
+      this.isDesktop = window.innerWidth >= 768;
     }
   }
 }

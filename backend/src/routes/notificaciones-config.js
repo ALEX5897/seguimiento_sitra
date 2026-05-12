@@ -1,144 +1,180 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db');
-const { ejecutarTodasLasNotificaciones } = require('../services/notificationService');
+const db = require('../db');
+const { requireAuth, requireAdmin, isAdmin } = require('../middleware/auth');
 
-function verificarAutenticacion(req, res, next) {
-  if (!req.session?.usuario) {
-    return res.status(401).json({ error: 'No autenticado' });
-  }
-  next();
-}
-
-function verificarAdmin(req, res, next) {
-  if (req.session?.usuario?.rol !== 'admin') {
-    return res.status(403).json({ error: 'Acceso denegado. Solo para administradores' });
-  }
-  next();
-}
-
-// GET /api/admin/notificaciones/config
-router.get('/config', verificarAutenticacion, verificarAdmin, async (req, res) => {
+// GET - Obtener configuración de notificaciones (solo admin)
+router.get('/', requireAdmin, async (req, res) => {
   try {
-    const [config] = await pool.query(
-      'SELECT id, activo, hora_envio, dias_retraso, updated_at FROM notificaciones_config WHERE id = 1'
-    );
-
-    if (config.length === 0) {
+    const [rows] = await db.query('SELECT * FROM notificaciones_config WHERE id = 1');
+    if (!rows.length) {
       return res.status(404).json({ error: 'Configuración no encontrada' });
     }
-
-    res.json(config[0]);
-  } catch (error) {
-    console.error('Error obteniendo configuración:', error);
-    res.status(500).json({ error: error.message });
+    const config = rows[0];
+    // Convertir valores booleanos para respuesta JSON
+    config.activo = Boolean(config.activo);
+    config.notificaciones_email_activas = Boolean(config.notificaciones_email_activas);
+    config.notificaciones_app_activas = Boolean(config.notificaciones_app_activas);
+    res.json(config);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// PUT /api/admin/notificaciones/config
-router.put('/config', verificarAutenticacion, verificarAdmin, async (req, res) => {
+// PUT - Actualizar configuración de notificaciones (solo admin)
+router.put('/', requireAdmin, async (req, res) => {
   try {
-    const { activo, hora_envio, dias_retraso } = req.body;
+    const { notificaciones_email_activas, notificaciones_app_activas, activo, hora_envio, dias_retraso } = req.body;
 
-    if (!hora_envio || !/^\d{2}:\d{2}$/.test(hora_envio)) {
-      return res.status(400).json({ error: 'Formato de hora inválido (usar HH:MM)' });
+    const updates = {};
+    if (notificaciones_email_activas !== undefined) {
+      updates.notificaciones_email_activas = notificaciones_email_activas ? 1 : 0;
+    }
+    if (notificaciones_app_activas !== undefined) {
+      updates.notificaciones_app_activas = notificaciones_app_activas ? 1 : 0;
+    }
+    if (activo !== undefined) {
+      updates.activo = activo ? 1 : 0;
+    }
+    if (hora_envio !== undefined) {
+      updates.hora_envio = hora_envio;
+    }
+    if (dias_retraso !== undefined) {
+      updates.dias_retraso = parseInt(dias_retraso);
     }
 
-    if (dias_retraso === undefined || dias_retraso < 0 || dias_retraso > 30) {
-      return res.status(400).json({ error: 'Días de retraso debe estar entre 0 y 30' });
-    }
+    const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+    const values = Object.values(updates);
+    values.push(1);
 
-    await pool.query(
-      'UPDATE notificaciones_config SET activo = ?, hora_envio = ?, dias_retraso = ? WHERE id = 1',
-      [activo === true ? 1 : 0, hora_envio, dias_retraso]
+    await db.query(
+      `UPDATE notificaciones_config SET ${setClause}, updated_at = NOW() WHERE id = ?`,
+      values
     );
+
+    const [rows] = await db.query('SELECT * FROM notificaciones_config WHERE id = 1');
+    const config = rows[0];
+    // Convertir valores booleanos para respuesta JSON
+    config.activo = Boolean(config.activo);
+    config.notificaciones_email_activas = Boolean(config.notificaciones_email_activas);
+    config.notificaciones_app_activas = Boolean(config.notificaciones_app_activas);
+    res.json(config);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET - Endpoint de diagnóstico (público, solo para desarrollo)
+router.get('/debug', async (req, res) => {
+  try {
+    const [config] = await db.query('SELECT * FROM notificaciones_config WHERE id = 1');
+    if (!config.length) {
+      return res.status(404).json({ error: 'Configuración no encontrada' });
+    }
+    const configData = config[0];
+    // Convertir valores booleanos
+    configData.activo = Boolean(configData.activo);
+    configData.notificaciones_email_activas = Boolean(configData.notificaciones_email_activas);
+    configData.notificaciones_app_activas = Boolean(configData.notificaciones_app_activas);
+    res.json({
+      config: configData,
+      sessionUser: req.session?.usuario || null,
+      isAuthenticated: !!req.session?.usuario,
+      cookies: req.cookies || null
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET - Obtener estado de envíos de notificaciones (solo admin)
+router.get('/status', requireAdmin, async (req, res) => {
+  try {
+    // Obtener estadísticas de envíos
+    const [ultimoEnvioNotificaciones] = await db.query(`
+      SELECT MAX(fecha_envio) as ultimo_envio
+      FROM notificaciones_log
+      WHERE tipo = 'notificaciones_generales'
+    `);
+
+    const [ultimoEnvioExpirados] = await db.query(`
+      SELECT MAX(fecha_envio) as ultimo_envio
+      FROM notificaciones_log
+      WHERE tipo = 'documentos_expirados'
+    `);
+
+    const [ultimoEnvioProximos] = await db.query(`
+      SELECT MAX(fecha_envio) as ultimo_envio
+      FROM notificaciones_log
+      WHERE tipo = 'documentos_proximos'
+    `);
+
+    const [correosHoy] = await db.query(`
+      SELECT COUNT(*) as total
+      FROM notificaciones_log
+      WHERE DATE(fecha_envio) = CURDATE()
+    `);
+
+    res.json({
+      ultimo_envio_notificaciones: ultimoEnvioNotificaciones[0]?.ultimo_envio || null,
+      ultimo_envio_expirados: ultimoEnvioExpirados[0]?.ultimo_envio || null,
+      ultimo_envio_proximos: ultimoEnvioProximos[0]?.ultimo_envio || null,
+      correos_enviados_hoy: correosHoy[0]?.total || 0
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST - Enviar correo de prueba (solo admin)
+router.post('/test-email', requireAdmin, async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Correo electrónico requerido' });
+    }
+
+    // Importar servicio de notificaciones
+    const { enviarCorreoPrueba } = require('../services/notificationService');
+
+    const resultado = await enviarCorreoPrueba(email);
 
     res.json({
       success: true,
-      message: 'Configuración actualizada',
-      nota: 'El cambio de hora requerirá reiniciar el servidor para que tome efecto el nuevo horario del CRON'
+      message: `Correo de prueba enviado a ${email}`,
+      resultado
     });
-  } catch (error) {
-    console.error('Error actualizando configuración:', error);
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/admin/notificaciones/plantillas
-router.get('/plantillas', verificarAutenticacion, verificarAdmin, async (req, res) => {
+// POST - Enviar notificaciones ahora (solo admin)
+router.post('/enviar-ahora', requireAdmin, async (req, res) => {
   try {
-    const [plantillas] = await pool.query(
-      'SELECT id, tipo, asunto, cuerpo_html, updated_at FROM notificaciones_plantillas ORDER BY tipo'
-    );
+    const { documentosExpirados, documentosProximos } = req.body;
 
-    res.json(plantillas);
-  } catch (error) {
-    console.error('Error obteniendo plantillas:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET /api/admin/notificaciones/plantillas/:tipo
-router.get('/plantillas/:tipo', verificarAutenticacion, verificarAdmin, async (req, res) => {
-  try {
-    const [plantilla] = await pool.query(
-      'SELECT id, tipo, asunto, cuerpo_html, updated_at FROM notificaciones_plantillas WHERE tipo = ?',
-      [req.params.tipo]
-    );
-
-    if (plantilla.length === 0) {
-      return res.status(404).json({ error: 'Plantilla no encontrada' });
+    if (!documentosExpirados && !documentosProximos) {
+      return res.status(400).json({ error: 'Selecciona al menos una opción' });
     }
 
-    res.json(plantilla[0]);
-  } catch (error) {
-    console.error('Error obteniendo plantilla:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
+    const { ejecutarNotificacionesManual } = require('../services/notificationService');
 
-// PUT /api/admin/notificaciones/plantillas/:tipo
-router.put('/plantillas/:tipo', verificarAutenticacion, verificarAdmin, async (req, res) => {
-  try {
-    const { asunto, cuerpo_html } = req.body;
-    const tipo = req.params.tipo;
+    const resultado = await ejecutarNotificacionesManual({
+      documentosExpirados,
+      documentosProximos
+    });
 
-    if (!asunto || asunto.trim() === '') {
-      return res.status(400).json({ error: 'El asunto es requerido' });
-    }
+    console.log('📤 Notificaciones enviadas manualmente');
 
-    if (!cuerpo_html || cuerpo_html.trim() === '') {
-      return res.status(400).json({ error: 'El cuerpo HTML es requerido' });
-    }
-
-    if (!['asignado', 'tarde'].includes(tipo)) {
-      return res.status(400).json({ error: 'Tipo de plantilla inválido (asignado|tarde)' });
-    }
-
-    const result = await pool.query(
-      'UPDATE notificaciones_plantillas SET asunto = ?, cuerpo_html = ? WHERE tipo = ?',
-      [asunto, cuerpo_html, tipo]
-    );
-
-    if (result[0].affectedRows === 0) {
-      return res.status(404).json({ error: 'Plantilla no encontrada' });
-    }
-
-    res.json({ success: true, message: 'Plantilla actualizada' });
-  } catch (error) {
-    console.error('Error actualizando plantilla:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// POST /api/admin/notificaciones/test
-router.post('/test', verificarAutenticacion, verificarAdmin, async (req, res) => {
-  try {
-    await ejecutarTodasLasNotificaciones();
-    res.json({ success: true, message: 'Notificaciones ejecutadas manualmente' });
-  } catch (error) {
-    console.error('Error ejecutando notificaciones:', error);
-    res.status(500).json({ error: error.message });
+    res.json({
+      success: true,
+      mensaje: `Se enviaron notificaciones: ${resultado.correos_enviados} correos, ${resultado.notificaciones_creadas} notificaciones en app`,
+      resultado
+    });
+  } catch (err) {
+    console.error('❌ Error enviando notificaciones:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 

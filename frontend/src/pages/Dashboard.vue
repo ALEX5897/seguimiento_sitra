@@ -1,25 +1,25 @@
 <template>
   <div class="p-4">
-    <!-- All KPI Cards in one row -->
+    <!-- All KPI Cards in one row - Clickeable para filtros -->
     <div class="row mb-5">
       <div class="col-lg-2 col-md-4 mb-4">
-        <div class="kpi-card reasignados">
+        <div class="kpi-card reasignados kpi-clickable" @click="goToReasignados()">
           <div class="kpi-icon">📋</div>
           <div class="kpi-title">Reasignados</div>
           <div class="kpi-number">{{ counts.reasignados }}</div>
-          <router-link class="kpi-button" to="/reasignados">Ver →</router-link>
+          <small class="kpi-subtitle">Ver todos →</small>
         </div>
       </div>
       <div class="col-lg-2 col-md-4 mb-4">
-        <div class="kpi-card expirados">
+        <div class="kpi-card expirados kpi-clickable" @click="goToReasignados('expirados')">
           <div class="kpi-icon">⚠️</div>
           <div class="kpi-title">Expirados</div>
           <div class="kpi-number">{{ counts.expirados }}</div>
-          <small class="text-muted">Requieren atención</small>
+          <small class="kpi-subtitle">Requieren atención</small>
         </div>
       </div>
       <div class="col-lg-2 col-md-4 mb-4">
-        <div class="kpi-card pendientes">
+        <div class="kpi-card pendientes kpi-clickable" @click="goToReasignados('pendientes')">
           <div class="kpi-icon">⏳</div>
           <div class="kpi-title">Pendientes</div>
           <div class="kpi-number">{{ kpiReasignados.pendientes }}</div>
@@ -27,7 +27,7 @@
         </div>
       </div>
       <div class="col-lg-2 col-md-4 mb-4">
-        <div class="kpi-card vencidos">
+        <div class="kpi-card vencidos kpi-clickable" @click="goToReasignados('vencidos')">
           <div class="kpi-icon">⛔</div>
           <div class="kpi-title">Vencidos</div>
           <div class="kpi-number">{{ kpiReasignados.vencidos }}</div>
@@ -35,7 +35,7 @@
         </div>
       </div>
       <div class="col-lg-2 col-md-4 mb-4">
-        <div class="kpi-card proximosvencer">
+        <div class="kpi-card proximosvencer kpi-clickable" @click="goToReasignados('proximosvencer')">
           <div class="kpi-icon">⚠️</div>
           <div class="kpi-title">Próximos a Vencer</div>
           <div class="kpi-number">{{ kpiReasignados.proximosVencer }}</div>
@@ -465,6 +465,10 @@ export default {
           }
         }
       });
+    },
+    goToReasignados(filtro = null) {
+      const query = filtro ? { filtro } : {};
+      this.$router.push({ path: '/reasignados', query });
     }
   }
 };
@@ -482,12 +486,21 @@ export default {
   border-radius: 10px;
   color: white;
   text-align: center;
-  transition: transform 0.3s;
+  transition: transform 0.3s, box-shadow 0.3s;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .kpi-card:hover {
   transform: translateY(-5px);
+}
+
+.kpi-clickable {
+  cursor: pointer;
+}
+
+.kpi-clickable:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  transform: translateY(-8px);
 }
 
 .kpi-card.reasignados {

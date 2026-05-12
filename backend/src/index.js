@@ -91,13 +91,13 @@ const memoryStore = new session.MemoryStore();
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'tu-clave-secreta-super-segura',
-  resave: false,
-  saveUninitialized: true, // Cambiar a true para guardar sesiones incluso antes de autenticar
+  resave: true,
+  saveUninitialized: true,
   store: memoryStore,
   cookie: {
     secure: sessionSecure,
     httpOnly: true,
-    sameSite: sessionSameSite,
+    sameSite: sessionSameSite || 'lax',
     maxAge: 1000 * 60 * 60 * 24 // 24 horas
   }
 }));
@@ -128,6 +128,40 @@ app.use('/api/admin/usuarios', admin);
 app.use('/api/admin/notificaciones', notificacionesConfig);
 app.use('/api/debug', debug);
 app.use('/api', comentarios);
+
+// TEMPORAL: Endpoint público para test de correo (solo para testing)
+app.post('/api/test/correo-prueba', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Correo electrónico requerido' });
+    }
+
+    const { enviarCorreoPrueba } = require('./services/notificationService');
+    const resultado = await enviarCorreoPrueba(email);
+
+    res.json({
+      success: true,
+      message: `Correo de prueba enviado a ${email}`,
+      resultado
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint de diagnóstico de sesión (público)
+app.get('/api/test/debug-session', async (req, res) => {
+  res.json({
+    sessionId: req.sessionID,
+    sessionData: req.session,
+    usuario: req.session?.usuario,
+    user: req.user,
+    keycloakEnabled: isKeycloakEnabled(),
+    cookies: req.headers.cookie || 'Sin cookies',
+    mensaje: 'Este endpoint muestra el estado actual de la sesión'
+  });
+});
 
 // Endpoint de prueba para forzar notificaciones manualmente
 app.post('/api/test/notificaciones', async (req, res) => {
