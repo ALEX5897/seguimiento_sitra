@@ -17,11 +17,34 @@
       </div>
     </div>
 
+    <!-- Buscador Global -->
+    <div class="row mb-3 align-items-center">
+      <div class="col-md-6">
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input
+            v-model="busqueda"
+            type="text"
+            class="form-control"
+            placeholder="Buscar por documento, estado, tipo..."
+            autocomplete="off"
+          />
+          <button v-if="busqueda" @click="busqueda = ''" class="btn btn-outline-secondary" type="button">
+            <i class="bi bi-x"></i>
+          </button>
+        </div>
+      </div>
+      <div class="col-md-6 text-end text-muted small">
+        {{ itemsFiltrados.length }} resultado(s)
+        <span v-if="busqueda"> para "<strong>{{ busqueda }}</strong>"</span>
+      </div>
+    </div>
+
     <!-- Tabla Mejorada -->
     <div class="card">
       <div class="card-body">
         <div class="table-responsive">
-          <table id="reasignadosTable" class="table table-hover mb-0">
+          <table class="table table-hover mb-0">
             <thead>
               <tr>
                 <th>#</th>
@@ -38,7 +61,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in items" :key="item.id" :class="{ 'table-danger': isExpired(item) }">
+              <tr v-for="item in itemsPaginados" :key="item.id" :class="{ 'table-danger': isExpired(item) }">
                 <td><strong>#{{ item.id }}</strong></td>
                 <td>
                   <span v-if="hasDeadline(item)" :class="isExpired(item) ? 'badge bg-danger' : 'badge bg-success'">
@@ -71,6 +94,34 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Paginación -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <div class="text-muted small">
+            Mostrando {{ Math.min((paginaActual-1)*porPagina+1, itemsFiltrados.length) }}–
+            {{ Math.min(paginaActual*porPagina, itemsFiltrados.length) }}
+            de {{ itemsFiltrados.length }}
+          </div>
+          <nav>
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item" :class="{ disabled: paginaActual === 1 }">
+                <button class="page-link" @click="paginaActual--" type="button">‹</button>
+              </li>
+              <li v-for="p in totalPaginas" :key="p" class="page-item" :class="{ active: p === paginaActual }">
+                <button class="page-link" @click="paginaActual = p" type="button">{{ p }}</button>
+              </li>
+              <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
+                <button class="page-link" @click="paginaActual++" type="button">›</button>
+              </li>
+            </ul>
+          </nav>
+          <select v-model.number="porPagina" class="form-select form-select-sm" style="width:auto">
+            <option :value="10">10</option>
+            <option :value="15">15</option>
+            <option :value="25">25</option>
+            <option :value="50">50</option>
+          </select>
         </div>
       </div>
     </div>
@@ -307,6 +358,7 @@ import api from '../api'
 import UsuarioSelector from '../components/UsuarioSelector.vue'
 import ComentariosReasignados from '../components/ComentariosReasignados.vue'
 import { showToast, confirmAction } from '../utils/feedback'
+import { normalizarTexto } from '../utils/texto'
 
 export default {
   components: {
@@ -323,7 +375,10 @@ export default {
       usuarioActual: {},
       usuarioSeleccionado: null,
       refreshHandler: null,
-      pastedData: ''
+      pastedData: '',
+      busqueda: '',
+      paginaActual: 1,
+      porPagina: 15
     }
   },
   mounted() { 
@@ -348,6 +403,9 @@ export default {
       if (newDocId) {
         this.abrirDocumentoPorId(newDocId)
       }
+    },
+    busqueda() {
+      this.paginaActual = 1
     }
   },
   computed: {
@@ -355,7 +413,32 @@ export default {
       const rol = (this.usuarioActual?.rol || '').toLowerCase()
       return rol === 'solo_vista' || rol === 'solo lectura' || rol === 'lectura'
     },
-    expiredItems() { return this.items.filter(i => this.isExpired(i)); }
+    expiredItems() { return this.items.filter(i => this.isExpired(i)); },
+    itemsFiltrados() {
+      if (!this.busqueda.trim()) return this.items
+      const t = normalizarTexto(this.busqueda)
+      return this.items.filter(item => {
+        const texto = [
+          item.numero_documento,
+          item.tipo_documento,
+          item.reasignado_a,
+          item.estado,
+          item.asunto,
+          item.remitente,
+          item.destinatario,
+          item.comentario,
+          item.numero_tramite
+        ].join(' ')
+        return normalizarTexto(texto).includes(t)
+      })
+    },
+    totalPaginas() {
+      return Math.ceil(this.itemsFiltrados.length / this.porPagina) || 1
+    },
+    itemsPaginados() {
+      const inicio = (this.paginaActual - 1) * this.porPagina
+      return this.itemsFiltrados.slice(inicio, inicio + this.porPagina)
+    }
   },
   methods: {
     async cargarUsuarioActual() {
@@ -368,35 +451,14 @@ export default {
         console.error('Error cargando usuario actual:', error);
       }
     },
-    async load() { 
-      // Destruir DataTable antes de actualizar datos
-      if ($.fn.DataTable.isDataTable('#reasignadosTable')) {
-        $('#reasignadosTable').DataTable().destroy();
-      }
-      
-      try { 
-        const r = await api.get('/reasignados'); 
-        this.items = r.data; 
-      } catch (e) { 
-        this.items = [] 
-      }
-      
-      // Esperar a que Vue actualice el DOM
-      await this.$nextTick();
-      
-      // Reinicializar DataTable
-      this.initDataTable(); 
-    },
-    initDataTable() {
+    async load() {
       try {
-        $('#reasignadosTable').DataTable({
-          paging: true,
-          searching: true,
-          ordering: true,
-          language: { url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json' },
-          columnDefs: [{ orderable: false, targets: -1 }]
-        });
-      } catch (err) { /* ignore if jQuery not loaded */ }
+        const r = await api.get('/reasignados');
+        this.items = r.data;
+      } catch (e) {
+        this.items = []
+      }
+      this.paginaActual = 1
     },
     async onFile(e) { 
       if (this.esSoloLectura) return;
@@ -424,6 +486,27 @@ export default {
     openEdit(item) {
       if (this.esSoloLectura) return;
       this.form = Object.assign({}, item);
+      // Asegurar que las fechas estén en formato correcto para datetime-local
+      const formatDate = (dateStr) => {
+        if (!dateStr || typeof dateStr !== 'string') return dateStr;
+
+        // Remover timezone UTC (Z) y milisegundos si están presentes (formato ISO)
+        dateStr = dateStr.replace('Z', '').replace(/\.\d{3}$/, '');
+
+        // Si es solo una fecha (YYYY-MM-DD), agregar hora por defecto
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          return dateStr + 'T00:00:00';
+        }
+        // Si tiene espacio, reemplazarlo con T
+        return dateStr.replace(' ', 'T');
+      };
+
+      this.form.fecha_documento = formatDate(this.form.fecha_documento);
+      this.form.fecha_reasignacion = formatDate(this.form.fecha_reasignacion);
+      this.form.fecha_max_respuesta = formatDate(this.form.fecha_max_respuesta);
+
+      console.log('📋 Item cargado para edición:', item);
+      console.log('📋 Fecha máx. respuesta formateada:', this.form.fecha_max_respuesta);
       this.pastedData = '';
       this.usuarioSeleccionado = null;
       this.editingId = item.id;
@@ -461,15 +544,27 @@ export default {
         } else {
           await api.post('/reasignados', this.form);
         }
-        await this.load();
-        const mod = bootstrap.Modal.getInstance(document.getElementById('reasignModal')); 
-        if (mod) mod.hide();
         showToast('Documento guardado correctamente', 'success');
-      } catch (err) { 
+
+        // Cerrar modal y limpiar formulario
+        const mod = bootstrap.Modal.getInstance(document.getElementById('reasignModal'));
+        if (mod) mod.hide();
+        this.resetForm();
+
+        // Recargar datos en background (no bloquea el modal)
+        this.load().catch(err => console.error('Error cargando datos:', err));
+      } catch (err) {
         showToast('Error guardando: ' + (err.response?.data?.message || err.message), 'error');
       } finally {
         this.isSaving = false;
       }
+    },
+
+    resetForm() {
+      this.form = {};
+      this.pastedData = '';
+      this.usuarioSeleccionado = null;
+      this.editingId = null;
     },
     async remove(id) { 
       if (this.esSoloLectura) {
@@ -498,7 +593,7 @@ export default {
         this.usuarioSeleccionado = null;
       }
     },
-    procesarDatosTabla() {
+    async procesarDatosTabla() {
       if (!this.pastedData.trim()) {
         showToast('Por favor pega los datos tabulados', 'warning');
         return;
@@ -516,7 +611,10 @@ export default {
         const fecha_doc_raw = values[0].replace(/\s*\(GMT[^\)]*\)/, '').trim();
         this.form.fecha_documento = this.formatearFechaAlInput(fecha_doc_raw);
 
-        this.form.reasignado_a = values[1].trim();
+        // Extraer nombre sin departamento/gerencia (texto entre paréntesis)
+        const nombreReasignado = values[1].trim().replace(/\s*\([^\)]*\)/g, '').trim();
+        this.form.reasignado_a = nombreReasignado;
+
         this.form.comentario = values[2].trim();
 
         const fecha_reasig_raw = values[3].replace(/\s*\(GMT[^\)]*\)/, '').trim();
@@ -538,6 +636,9 @@ export default {
         this.form.numero_tramite = values[10].trim();
         this.form.estado = values[11].trim();
 
+        // Buscar y seleccionar usuario automáticamente
+        await this.buscarYSeleccionarUsuario(nombreReasignado);
+
         // Limpiar el campo de entrada
         this.pastedData = '';
 
@@ -547,10 +648,53 @@ export default {
         showToast('Error al procesar los datos: ' + err.message, 'error');
       }
     },
+
+    async buscarYSeleccionarUsuario(nombreUsuario) {
+      try {
+        console.log(`🔍 Buscando usuario: "${nombreUsuario}"`);
+        const response = await api.get(`/usuarios/buscar/${encodeURIComponent(nombreUsuario)}`);
+        const usuarios = response.data || [];
+
+        console.log(`📋 Usuarios encontrados:`, usuarios);
+
+        if (usuarios.length > 0) {
+          // Buscar coincidencia exacta
+          let usuarioEncontrado = usuarios.find(u =>
+            (u.nombre || '').toLowerCase().trim() === nombreUsuario.toLowerCase().trim()
+          );
+
+          if (usuarioEncontrado) {
+            console.log(`✅ Coincidencia exacta encontrada:`, usuarioEncontrado);
+          } else {
+            console.warn(`⚠️ No hay coincidencia exacta. Mostrando resultados encontrados:`, usuarios);
+            // Si no hay coincidencia exacta, mostrar un aviso
+            showToast(`Se encontraron ${usuarios.length} usuarios similares a "${nombreUsuario}". Selecciona el correcto manualmente.`, 'warning');
+            return;
+          }
+
+          // Seleccionar el usuario encontrado
+          this.onUsuarioSeleccionado(usuarioEncontrado);
+        } else {
+          console.warn(`❌ No se encontró usuario: ${nombreUsuario}`);
+          showToast(`No se encontró usuario con nombre "${nombreUsuario}"`, 'warning');
+        }
+      } catch (error) {
+        console.error('Error buscando usuario:', error);
+        showToast('Error al buscar usuario', 'error');
+      }
+    },
     formatearFechaAlInput(fecha) {
-      // Convierte "2026-03-16 17:28:45" a formato datetime-local "2026-03-16T17:28:45"
-      // También maneja formato "2026-04-14" (solo fecha)
+      // Convierte "2026-03-16 17:28:45" o ISO "2026-03-16T17:28:45.000Z" a formato datetime-local
       if (!fecha) return '';
+
+      // Remover timezone UTC (Z) y milisegundos si están presentes (formato ISO)
+      fecha = fecha.replace('Z', '').replace(/\.\d{3}$/, '');
+
+      // Si es solo una fecha (YYYY-MM-DD), agregar hora por defecto
+      if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+        return fecha + 'T00:00:00';
+      }
+      // Si tiene espacio, reemplazarlo con T
       return fecha.replace(' ', 'T');
     },
     // Deadline helpers

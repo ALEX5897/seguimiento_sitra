@@ -13,11 +13,34 @@
       </div>
     </div>
 
+    <!-- Buscador Global -->
+    <div class="row mb-3 align-items-center">
+      <div class="col-md-6">
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input
+            v-model="busqueda"
+            type="text"
+            class="form-control"
+            placeholder="Buscar por documento, estado, descripción..."
+            autocomplete="off"
+          />
+          <button v-if="busqueda" @click="busqueda = ''" class="btn btn-outline-secondary" type="button">
+            <i class="bi bi-x"></i>
+          </button>
+        </div>
+      </div>
+      <div class="col-md-6 text-end text-muted small">
+        {{ itemsFiltrados.length }} resultado(s)
+        <span v-if="busqueda"> para "<strong>{{ busqueda }}</strong>"</span>
+      </div>
+    </div>
+
     <!-- Tabla Mejorada -->
     <div class="card">
       <div class="card-body">
         <div class="table-responsive">
-          <table id="tareasTable" class="table table-hover mb-0">
+          <table class="table table-hover mb-0">
             <thead>
               <tr>
                 <th>#</th>
@@ -30,7 +53,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in items" :key="item.id" :class="{ 'table-warning': isUrgent(item), 'table-success': isCompleted(item) }">
+              <tr v-for="item in itemsPaginados" :key="item.id" :class="{ 'table-warning': isUrgent(item), 'table-success': isCompleted(item) }">
                 <td><strong>#{{ item.id }}</strong></td>
                 <td>
                   <span v-if="isCompleted(item)" class="badge bg-success">✓ Completada</span>
@@ -55,6 +78,34 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Paginación -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <div class="text-muted small">
+            Mostrando {{ Math.min((paginaActual-1)*porPagina+1, itemsFiltrados.length) }}–
+            {{ Math.min(paginaActual*porPagina, itemsFiltrados.length) }}
+            de {{ itemsFiltrados.length }}
+          </div>
+          <nav>
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item" :class="{ disabled: paginaActual === 1 }">
+                <button class="page-link" @click="paginaActual--" type="button">‹</button>
+              </li>
+              <li v-for="p in totalPaginas" :key="p" class="page-item" :class="{ active: p === paginaActual }">
+                <button class="page-link" @click="paginaActual = p" type="button">{{ p }}</button>
+              </li>
+              <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
+                <button class="page-link" @click="paginaActual++" type="button">›</button>
+              </li>
+            </ul>
+          </nav>
+          <select v-model.number="porPagina" class="form-select form-select-sm" style="width:auto">
+            <option :value="10">10</option>
+            <option :value="15">15</option>
+            <option :value="25">25</option>
+            <option :value="50">50</option>
+          </select>
         </div>
       </div>
     </div>
@@ -197,26 +248,59 @@
 import api from '../api'
 import UsuarioSelector from '../components/UsuarioSelector.vue'
 import { showToast, confirmAction } from '../utils/feedback'
+import { normalizarTexto } from '../utils/texto'
 
 export default {
   components: {
     UsuarioSelector
   },
-  data() { 
-    return { 
-      items: [], 
-      form: {}, 
-      editingId: null, 
+  data() {
+    return {
+      items: [],
+      form: {},
+      editingId: null,
       viewItem: null,
       isSaving: false,
       usuarioActual: null,
-      refreshHandler: null
-    } 
+      refreshHandler: null,
+      busqueda: '',
+      paginaActual: 1,
+      porPagina: 15
+    }
   },
   computed: {
     esSoloLectura() {
       const rol = (this.usuarioActual?.rol || '').toLowerCase();
       return rol === 'solo_vista' || rol === 'solo lectura' || rol === 'lectura';
+    },
+    itemsFiltrados() {
+      if (!this.busqueda.trim()) return this.items
+      const t = normalizarTexto(this.busqueda)
+      return this.items.filter(item => {
+        const texto = [
+          item.numero_documento,
+          item.asignado_para,
+          item.estado,
+          item.descripcion,
+          item.avance,
+          item.remitente,
+          item.destinatario,
+          item.asunto
+        ].join(' ')
+        return normalizarTexto(texto).includes(t)
+      })
+    },
+    totalPaginas() {
+      return Math.ceil(this.itemsFiltrados.length / this.porPagina) || 1
+    },
+    itemsPaginados() {
+      const inicio = (this.paginaActual - 1) * this.porPagina
+      return this.itemsFiltrados.slice(inicio, inicio + this.porPagina)
+    }
+  },
+  watch: {
+    busqueda() {
+      this.paginaActual = 1
     }
   },
   mounted() {
@@ -239,35 +323,14 @@ export default {
         this.usuarioActual = null;
       }
     },
-    async load() { 
-      // Destruir DataTable antes de actualizar datos
-      if ($.fn.DataTable.isDataTable('#tareasTable')) {
-        $('#tareasTable').DataTable().destroy();
-      }
-      
-      try { 
-        const r = await api.get('/tareas'); 
-        this.items = r.data; 
-      } catch (e) { 
-        this.items = [] 
-      }
-      
-      // Esperar a que Vue actualice el DOM
-      await this.$nextTick();
-      
-      // Reinicializar DataTable
-      this.initDataTable(); 
-    },
-    initDataTable() {
+    async load() {
       try {
-        $('#tareasTable').DataTable({
-          paging: true,
-          searching: true,
-          ordering: true,
-          language: { url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json' },
-          columnDefs: [{ orderable: false, targets: -1 }]
-        });
-      } catch (err) { /* ignore if jQuery not loaded */ }
+        const r = await api.get('/tareas');
+        this.items = r.data;
+      } catch (e) {
+        this.items = []
+      }
+      this.paginaActual = 1
     },
     openCreate() { 
       if (this.esSoloLectura) return;
