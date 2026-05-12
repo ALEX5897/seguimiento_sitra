@@ -26,7 +26,7 @@ router.get('/', requireAuth,async (req, res) => {
       }
     }
 
-    query += ' ORDER BY r.id DESC LIMIT 100';
+    query += ' ORDER BY r.id DESC LIMIT 50';
     const [rows] = await db.query(query, params);
     res.json(rows);
   } catch (err) {
