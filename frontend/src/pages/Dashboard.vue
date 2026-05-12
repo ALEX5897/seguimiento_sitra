@@ -1,14 +1,8 @@
 <template>
   <div class="p-4">
-    <!-- Encabezado -->
-    <div class="mb-5">
-      <h1 class="page-title">📊 Dashboard de Documentos</h1>
-      <p class="text-muted">Panel de control con estadísticas en tiempo real</p>
-    </div>
-
-    <!-- Tarjetas KPI -->
+    <!-- All KPI Cards in one row -->
     <div class="row mb-5">
-      <div class="col-lg-3 col-md-6 mb-4">
+      <div class="col-lg-2 col-md-4 mb-4">
         <div class="kpi-card reasignados">
           <div class="kpi-icon">📋</div>
           <div class="kpi-title">Reasignados</div>
@@ -16,7 +10,7 @@
           <router-link class="kpi-button" to="/reasignados">Ver →</router-link>
         </div>
       </div>
-      <div class="col-lg-3 col-md-6 mb-4">
+      <div class="col-lg-2 col-md-4 mb-4">
         <div class="kpi-card expirados">
           <div class="kpi-icon">⚠️</div>
           <div class="kpi-title">Expirados</div>
@@ -24,12 +18,7 @@
           <small class="text-muted">Requieren atención</small>
         </div>
       </div>
-    </div>
-
-    <!-- KPIs Detallados de Reasignados -->
-    <div class="row mb-5">
-      <!-- Documentos Pendientes -->
-      <div class="col-lg-3 col-md-6 mb-4">
+      <div class="col-lg-2 col-md-4 mb-4">
         <div class="kpi-card pendientes">
           <div class="kpi-icon">⏳</div>
           <div class="kpi-title">Pendientes</div>
@@ -37,9 +26,7 @@
           <small class="kpi-subtitle">De {{ kpiReasignados.total }} total</small>
         </div>
       </div>
-
-      <!-- Documentos Vencidos -->
-      <div class="col-lg-3 col-md-6 mb-4">
+      <div class="col-lg-2 col-md-4 mb-4">
         <div class="kpi-card vencidos">
           <div class="kpi-icon">⛔</div>
           <div class="kpi-title">Vencidos</div>
@@ -47,9 +34,7 @@
           <small class="kpi-subtitle">Atención inmediata</small>
         </div>
       </div>
-
-      <!-- Próximos a Vencer -->
-      <div class="col-lg-3 col-md-6 mb-4">
+      <div class="col-lg-2 col-md-4 mb-4">
         <div class="kpi-card proximosvencer">
           <div class="kpi-icon">⚠️</div>
           <div class="kpi-title">Próximos a Vencer</div>
