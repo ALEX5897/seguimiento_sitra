@@ -73,6 +73,12 @@
             </router-link>
           </li>
           <li v-if="authStore.isAdmin" class="nav-item">
+            <router-link to="/catalogos" class="nav-link text-white d-flex align-items-center gap-2 ps-5">
+              <i class="bi bi-bookmarks"></i>
+              <span>Catálogos</span>
+            </router-link>
+          </li>
+          <li v-if="authStore.isAdmin" class="nav-item">
             <router-link to="/carga-masiva" class="nav-link text-white d-flex align-items-center gap-2 ps-5">
               <i class="bi bi-cloud-upload"></i>
               <span>Carga Masiva</span>
