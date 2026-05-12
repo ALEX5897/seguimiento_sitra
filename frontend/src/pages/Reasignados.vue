@@ -448,15 +448,16 @@ export default {
           const isExcluded = ['archivado', 'eliminado', 'enviado', 'completado', 'resuelto', 'cancelado'].includes(estado)
 
           switch (this.filtroTipo) {
+            case 'expirados':
             case 'vencidos':
               if (!item.fecha_max_respuesta) return false
               const isExpired = new Date(item.fecha_max_respuesta) < now
-              return isExpired && !isExcluded && (estado === 'pendiente' || estado === 'en_proceso')
+              return isExpired && !isExcluded
             case 'proximosvencer':
               if (!item.fecha_max_respuesta) return false
               const timeLeft = new Date(item.fecha_max_respuesta) - now
               const hoursLeft = timeLeft / (1000 * 60 * 60)
-              return hoursLeft > 0 && hoursLeft <= 24 && !isExcluded && (estado === 'pendiente' || estado === 'en_proceso')
+              return hoursLeft > 0 && hoursLeft <= 24 && !isExcluded
             case 'pendientes':
               return estado === 'pendiente'
             case 'en_proceso':
@@ -885,6 +886,7 @@ export default {
       this.paginaActual = 1
 
       const etiquetas = {
+        'expirados': '⚠️ Expirados',
         'vencidos': '⛔ Vencidos',
         'proximosvencer': '⚠️ Próximos a Vencer',
         'pendientes': '⏳ Pendientes',
