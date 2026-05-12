@@ -13,7 +13,7 @@
           <div class="kpi-icon">📋</div>
           <div class="kpi-title">Reasignados</div>
           <div class="kpi-number">{{ counts.reasignados }}</div>
-          <a class="kpi-button" href="/reasignados">Ver →</a>
+          <router-link class="kpi-button" to="/reasignados">Ver →</router-link>
         </div>
       </div>
       <div class="col-lg-3 col-md-6 mb-4">
@@ -24,20 +24,102 @@
           <small class="text-muted">Requieren atención</small>
         </div>
       </div>
+    </div>
+
+    <!-- KPIs Detallados de Reasignados -->
+    <div class="row mb-5">
+      <div class="col-12 mb-4">
+        <h3 class="mb-3"><i class="bi bi-bar-chart"></i> KPIs de Reasignados</h3>
+      </div>
+
+      <!-- Tasa de Cumplimiento -->
       <div class="col-lg-3 col-md-6 mb-4">
-        <div class="kpi-card enviados">
-          <div class="kpi-icon">📤</div>
-          <div class="kpi-title">Enviados</div>
-          <div class="kpi-number">{{ counts.enviados }}</div>
-          <a class="kpi-button" href="/enviados">Ver →</a>
+        <div class="card kpi-detail">
+          <div class="card-body text-center">
+            <h6 class="text-muted mb-2">Tasa de Cumplimiento</h6>
+            <div class="kpi-large-number" :class="kpiReasignados.tasa_cumplimiento >= 80 ? 'text-success' : kpiReasignados.tasa_cumplimiento >= 50 ? 'text-warning' : 'text-danger'">
+              {{ kpiReasignados.tasa_cumplimiento }}%
+            </div>
+            <small class="text-muted">{{ kpiReasignados.resueltos }} de {{ kpiReasignados.total }} resueltos</small>
+          </div>
         </div>
       </div>
+
+      <!-- Documentos Pendientes -->
       <div class="col-lg-3 col-md-6 mb-4">
-        <div class="kpi-card tareas">
-          <div class="kpi-icon">✓</div>
-          <div class="kpi-title">Tareas</div>
-          <div class="kpi-number">{{ counts.tareas }}</div>
-          <a class="kpi-button" href="/tareas">Ver →</a>
+        <div class="card kpi-detail">
+          <div class="card-body text-center">
+            <h6 class="text-muted mb-2">Pendientes</h6>
+            <div class="kpi-large-number" :class="kpiReasignados.pendientes > 10 ? 'text-danger' : 'text-info'">
+              {{ kpiReasignados.pendientes }}
+            </div>
+            <small class="text-muted">De {{ kpiReasignados.total }} total</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documentos Vencidos -->
+      <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card kpi-detail">
+          <div class="card-body text-center">
+            <h6 class="text-muted mb-2">Vencidos</h6>
+            <div class="kpi-large-number" :class="kpiReasignados.vencidos > 0 ? 'text-danger' : 'text-success'">
+              {{ kpiReasignados.vencidos }}
+            </div>
+            <small class="text-muted">Requieren atención inmediata</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Próximos a Vencer -->
+      <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card kpi-detail">
+          <div class="card-body text-center">
+            <h6 class="text-muted mb-2">Próximos a Vencer</h6>
+            <div class="kpi-large-number text-warning">
+              {{ kpiReasignados.proximosVencer }}
+            </div>
+            <small class="text-muted">En las próximas 24h</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tiempo Promedio de Respuesta -->
+      <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card kpi-detail">
+          <div class="card-body text-center">
+            <h6 class="text-muted mb-2">Tiempo Promedio</h6>
+            <div class="kpi-large-number text-info">
+              {{ kpiReasignados.tiempoPromedioRespuesta }}
+            </div>
+            <small class="text-muted">días ({{ kpiReasignados.documentosResueltos }} documentos)</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documentos Resueltos -->
+      <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card kpi-detail">
+          <div class="card-body text-center">
+            <h6 class="text-muted mb-2">Resueltos</h6>
+            <div class="kpi-large-number text-success">
+              {{ kpiReasignados.resueltos }}
+            </div>
+            <small class="text-muted">Con respuesta registrada</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Reasignados -->
+      <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card kpi-detail">
+          <div class="card-body text-center">
+            <h6 class="text-muted mb-2">Total Reasignados</h6>
+            <div class="kpi-large-number text-primary">
+              {{ kpiReasignados.total }}
+            </div>
+            <small class="text-muted">Todos los estados</small>
+          </div>
         </div>
       </div>
     </div>
@@ -109,67 +191,76 @@
       </div>
     </div>
 
-    <!-- Row 1: Gráficos principales -->
+
+    <!-- Row 3: Gráficos de Reasignados -->
     <div class="row mb-5">
-      <!-- Progreso de Tareas por Área -->
-      <div v-if="!esSoloLectura" class="col-lg-6 mb-4">
+      <!-- Reasignados por Usuario -->
+      <div class="col-lg-6 mb-4">
         <div class="card h-100">
           <div class="card-header">
-            <span>📈</span> Progreso de Tareas por Área
+            <span>👥</span> Reasignados por Persona
           </div>
           <div class="card-body">
-            <canvas id="tareasAreaChart"></canvas>
+            <canvas id="reasignadosPorUsuarioChart"></canvas>
           </div>
         </div>
       </div>
 
-      <!-- Documentos Expirados por Área -->
-      <div v-if="!esSoloLectura" class="col-lg-6 mb-4">
+      <!-- Reasignados por Importancia con detalles -->
+      <div class="col-lg-6 mb-4">
         <div class="card h-100">
           <div class="card-header">
-            <span>🔴</span> Documentos Expirados por Área
+            <span>🎯</span> Reasignados por Importancia
           </div>
           <div class="card-body">
-            <canvas id="expiradosAreaChart"></canvas>
+            <canvas id="reasignadosPorImportanciaChart"></canvas>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Row 2: Más gráficos -->
+    <!-- Tabla de Reasignados por Usuario -->
     <div class="row mb-5">
-      <!-- Distribución de Tipos de Documento -->
-      <div v-if="!esSoloLectura" class="col-lg-4 mb-4">
-        <div class="card h-100">
+      <div class="col-12 mb-4">
+        <div class="card">
           <div class="card-header">
-            <span>📄</span> Tipos de Documento
+            <span>📊</span> Carga de Trabajo por Persona
           </div>
           <div class="card-body">
-            <canvas id="tiposDocumentoChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- Estado de Tareas -->
-      <div :class="esSoloLectura ? 'col-lg-6 mb-4' : 'col-lg-4 mb-4'">
-        <div class="card h-100">
-          <div class="card-header">
-            <span>⚙️</span> Estado de Tareas
-          </div>
-          <div class="card-body">
-            <canvas id="estadoTareasChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- Distribución de Importancia -->
-      <div :class="esSoloLectura ? 'col-lg-6 mb-4' : 'col-lg-4 mb-4'">
-        <div class="card h-100">
-          <div class="card-header">
-            <span>📊</span> Importancia de Documentos
-          </div>
-          <div class="card-body">
-            <canvas id="importanciaChart"></canvas>
+            <div class="table-responsive">
+              <table class="table table-hover mb-0" v-if="reasignadosPorUsuario.length > 0">
+                <thead>
+                  <tr>
+                    <th>Persona</th>
+                    <th>Total</th>
+                    <th>Pendientes</th>
+                    <th>Resueltos</th>
+                    <th>Vencidos</th>
+                    <th>% Cumplimiento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="usuario in reasignadosPorUsuario" :key="usuario.persona">
+                    <td><strong>{{ usuario.persona }}</strong></td>
+                    <td><span class="badge bg-primary">{{ usuario.total }}</span></td>
+                    <td><span class="badge" :class="usuario.pendientes > 5 ? 'bg-danger' : 'bg-warning'">{{ usuario.pendientes }}</span></td>
+                    <td><span class="badge bg-success">{{ usuario.resueltos }}</span></td>
+                    <td><span class="badge" :class="usuario.vencidos > 0 ? 'bg-danger' : 'bg-secondary'">{{ usuario.vencidos }}</span></td>
+                    <td>
+                      <div class="progress" style="height: 20px;">
+                        <div class="progress-bar" :class="usuario.total > 0 && (usuario.resueltos/usuario.total) >= 0.8 ? 'bg-success' : 'bg-warning'"
+                             :style="{width: usuario.total > 0 ? ((usuario.resueltos/usuario.total)*100) + '%' : '0%'}">
+                          {{ usuario.total > 0 ? Math.round((usuario.resueltos/usuario.total)*100) : 0 }}%
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div v-else class="text-center py-4 text-muted">
+                <span>✓</span> Sin datos
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -190,19 +281,22 @@ export default {
     return {
       counts: {
         reasignados: 0,
-        tareas: 0,
-        enviados: 0,
         expirados: 0
       },
+      kpiReasignados: {
+        total: 0,
+        pendientes: 0,
+        resueltos: 0,
+        vencidos: 0,
+        proximosVencer: 0,
+        tasa_cumplimiento: 0,
+        tiempoPromedioRespuesta: 0,
+        documentosResueltos: 0
+      },
+      reasignadosPorUsuario: [],
+      reasignadosPorImportancia: [],
       charts: {},
       usuarioActual: null,
-      estadisticas: {
-        tareasArea: [],
-        expiradosArea: [],
-        tiposDocumento: [],
-        estadoTareas: [],
-        importancia: []
-      },
       expiredByUser: [],
       upcomingExpiry: [],
       refreshInterval: null,
@@ -256,33 +350,22 @@ export default {
           return isExpired && !isExcluded;
         }).length;
 
-        // Load tareas
-        const tareasRes = await api.get('/tareas');
-        console.log('Tareas:', tareasRes.data);
-        this.counts.tareas = tareasRes.data.length;
-
-        // Load enviados
-        const enviRes = await api.get('/enviados');
-        console.log('Enviados:', enviRes.data);
-        this.counts.enviados = enviRes.data.length;
-
-        // Load statistics
-        console.log('Loading statistics...');
-        const [tareasArea, expirados, tipos, estado, importancia] = await Promise.all([
-          api.get('/estadisticas/tareas-por-area').catch(e => { console.error('tareasArea error:', e); return {data: []}; }),
-          api.get('/estadisticas/documentos-expirados-por-area').catch(e => { console.error('expirados error:', e); return {data: []}; }),
-          api.get('/estadisticas/tipos-documento').catch(e => { console.error('tipos error:', e); return {data: []}; }),
-          api.get('/estadisticas/estado-tareas').catch(e => { console.error('estado error:', e); return {data: []}; }),
-          api.get('/estadisticas/importancia-reasignados').catch(e => { console.error('importancia error:', e); return {data: []}; })
+        // Load statistics (only reasignados-related)
+        console.log('Loading reasignados statistics...');
+        const [kpiReas, reasxUsuario, reasxImportancia, tiempoPromedio] = await Promise.all([
+          api.get('/estadisticas/kpi/reasignados').catch(e => { console.error('kpiReasignados error:', e); return {data: {}}; }),
+          api.get('/estadisticas/kpi/reasignados-por-usuario').catch(e => { console.error('reasignadosPorUsuario error:', e); return {data: []}; }),
+          api.get('/estadisticas/kpi/reasignados-por-importancia').catch(e => { console.error('reasignadosPorImportancia error:', e); return {data: []}; }),
+          api.get('/estadisticas/kpi/tiempo-promedio-respuesta').catch(e => { console.error('tiempoPromedio error:', e); return {data: {}}; })
         ]);
 
-        this.estadisticas.tareasArea = tareasArea.data;
-        this.estadisticas.expiradosArea = expirados.data;
-        this.estadisticas.tiposDocumento = tipos.data;
-        this.estadisticas.estadoTareas = estado.data;
-        this.estadisticas.importancia = importancia.data;
+        this.kpiReasignados = { ...kpiReas.data };
+        this.kpiReasignados.tiempoPromedioRespuesta = tiempoPromedio.data?.tiempo_promedio_dias || 0;
+        this.kpiReasignados.documentosResueltos = tiempoPromedio.data?.documentos_resueltos || 0;
+        this.reasignadosPorUsuario = reasxUsuario.data;
+        this.reasignadosPorImportancia = reasxImportancia.data;
 
-        console.log('All statistics loaded:', this.estadisticas);
+        console.log('Reasignados statistics loaded');
 
         // Load expired and upcoming data
         await Promise.all([
@@ -296,30 +379,6 @@ export default {
         });
       } catch (err) {
         console.error('Error loading dashboard data:', err);
-      }
-    },
-    async loadReasignados() {
-      try {
-        const res = await api.get('/reasignados');
-        this.counts.reasignados = res.data.length;
-      } catch (err) {
-        console.error('Error loading reasignados:', err);
-      }
-    },
-    async loadTareas() {
-      try {
-        const res = await api.get('/tareas');
-        this.counts.tareas = res.data.length;
-      } catch (err) {
-        console.error('Error loading tareas:', err);
-      }
-    },
-    async loadEnviados() {
-      try {
-        const res = await api.get('/enviados');
-        this.counts.enviados = res.data.length;
-      } catch (err) {
-        console.error('Error loading enviados:', err);
       }
     },
     async loadExpiredByUser() {
@@ -410,40 +469,35 @@ export default {
       return Math.max(0, diffHours);
     },
     renderCharts() {
-      if (!this.esSoloLectura) {
-        this.renderTareasAreaChart();
-        this.renderExpiradosAreaChart();
-        this.renderTiposDocumentoChart();
-      }
-      this.renderEstadoTareasChart();
-      this.renderImportanciaChart();
+      this.renderReasignadosPorUsuarioChart();
+      this.renderReasignadosPorImportanciaChart();
     },
-    renderTareasAreaChart() {
-      const ctx = document.getElementById('tareasAreaChart');
+    renderReasignadosPorUsuarioChart() {
+      const ctx = document.getElementById('reasignadosPorUsuarioChart');
       if (!ctx) return;
 
-      if (this.charts.tareasArea) this.charts.tareasArea.destroy();
+      if (this.charts.reasignadosPorUsuario) this.charts.reasignadosPorUsuario.destroy();
 
-      const data = this.estadisticas.tareasArea;
-      this.charts.tareasArea = new Chart(ctx, {
+      const data = this.reasignadosPorUsuario;
+      this.charts.reasignadosPorUsuario = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: data.map(d => d.area),
+          labels: data.map(d => d.persona),
           datasets: [
-            {
-              label: 'Completadas',
-              data: data.map(d => d.completadas || 0),
-              backgroundColor: '#198754'
-            },
-            {
-              label: 'En Proceso',
-              data: data.map(d => d.en_proceso || 0),
-              backgroundColor: '#ffc107'
-            },
             {
               label: 'Pendientes',
               data: data.map(d => d.pendientes || 0),
               backgroundColor: '#dc3545'
+            },
+            {
+              label: 'Resueltos',
+              data: data.map(d => d.resueltos || 0),
+              backgroundColor: '#198754'
+            },
+            {
+              label: 'Vencidos',
+              data: data.map(d => d.vencidos || 0),
+              backgroundColor: '#fd7e14'
             }
           ]
         },
@@ -459,112 +513,35 @@ export default {
         }
       });
     },
-    renderExpiradosAreaChart() {
-      const ctx = document.getElementById('expiradosAreaChart');
+    renderReasignadosPorImportanciaChart() {
+      const ctx = document.getElementById('reasignadosPorImportanciaChart');
       if (!ctx) return;
 
-      if (this.charts.expiradosArea) this.charts.expiradosArea.destroy();
+      if (this.charts.reasignadosPorImportancia) this.charts.reasignadosPorImportancia.destroy();
 
-      const data = this.estadisticas.expiradosArea;
-      this.charts.expiradosArea = new Chart(ctx, {
+      const data = this.reasignadosPorImportancia;
+      const colors = ['#dc3545', '#fd7e14', '#ffc107', '#198754', '#6c757d'];
+      const colorMap = {
+        'Urgente': '#dc3545',
+        'Alta': '#fd7e14',
+        'Media': '#ffc107',
+        'Baja': '#198754',
+        'No especificada': '#6c757d'
+      };
+
+      this.charts.reasignadosPorImportancia = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: data.map(d => `${d.area} (${d.expirados || 0}/${d.total})`),
+          labels: data.map(d => d.importancia),
           datasets: [{
-            data: data.map(d => d.expirados || 0),
-            backgroundColor: [
-              '#dc3545', '#fd7e14', '#ffc107', '#198754', '#0dcaf0', '#6f42c1'
-            ]
+            data: data.map(d => d.pendientes || 0),
+            backgroundColor: data.map(d => colorMap[d.importancia] || '#6c757d')
           }]
         },
         options: {
           responsive: true,
           plugins: {
-            legend: { position: 'bottom' }
-          }
-        }
-      });
-    },
-    renderTiposDocumentoChart() {
-      const ctx = document.getElementById('tiposDocumentoChart');
-      if (!ctx) return;
-
-      if (this.charts.tiposDocumento) this.charts.tiposDocumento.destroy();
-
-      const data = this.estadisticas.tiposDocumento;
-      this.charts.tiposDocumento = new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: data.map(d => d.tipo),
-          datasets: [{
-            data: data.map(d => d.cantidad),
-            backgroundColor: [
-              '#0dcaf0', '#198754', '#ffc107', '#dc3545', '#6f42c1'
-            ]
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { position: 'bottom' }
-          }
-        }
-      });
-    },
-    renderEstadoTareasChart() {
-      const ctx = document.getElementById('estadoTareasChart');
-      if (!ctx) return;
-
-      if (this.charts.estadoTareas) this.charts.estadoTareas.destroy();
-
-      const data = this.estadisticas.estadoTareas;
-      this.charts.estadoTareas = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: data.map(d => `${d.estado} (${d.cantidad})`),
-          datasets: [{
-            data: data.map(d => d.cantidad),
-            backgroundColor: [
-              '#198754', '#ffc107', '#dc3545', '#0dcaf0'
-            ]
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { position: 'bottom' }
-          }
-        }
-      });
-    },
-    renderImportanciaChart() {
-      const ctx = document.getElementById('importanciaChart');
-      if (!ctx) return;
-
-      if (this.charts.importancia) this.charts.importancia.destroy();
-
-      const data = this.estadisticas.importancia;
-      const order = { 'Urgente': 0, 'Alta': 1, 'Media': 2, 'Baja': 3 };
-      const sortedData = data.sort((a, b) => (order[a.importancia] || 999) - (order[b.importancia] || 999));
-
-      this.charts.importancia = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: sortedData.map(d => d.importancia),
-          datasets: [{
-            label: 'Cantidad',
-            data: sortedData.map(d => d.cantidad),
-            backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#198754']
-          }]
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true,
-          scales: {
-            x: { beginAtZero: true }
-          },
-          plugins: {
-            legend: { display: false }
+            legend: { position: 'right' }
           }
         }
       });
@@ -595,14 +572,6 @@ export default {
 
 .kpi-card.reasignados {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.kpi-card.tareas {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.kpi-card.enviados {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
 }
 
 .kpi-card.expirados {
@@ -663,5 +632,22 @@ canvas {
 .badge {
   font-size: 0.9rem;
   padding: 5px 10px;
+}
+
+.kpi-detail {
+  background: white;
+  border-left: 4px solid #667eea;
+  transition: all 0.3s;
+}
+
+.kpi-detail:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.kpi-large-number {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin: 10px 0;
 }
 </style>
