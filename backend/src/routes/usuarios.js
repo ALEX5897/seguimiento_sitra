@@ -3,6 +3,79 @@ const router = express.Router();
 const db = require('../db');
 const { requireAuth } = require('../middleware/auth');
 
+// RUTAS ESPECÍFICAS PRIMERO (evita conflictos con parámetros genéricos)
+
+// GET - Obtener todos los empleados activos (para dropdowns)
+router.get('/activos/lista', requireAuth, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT id, nombre, cargo, gerencia, correo FROM empleados WHERE estado = "activo" ORDER BY gerencia ASC, nombre ASC'
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET - Buscar empleados por coincidencia (autocompletar)
+router.get('/buscar/:termino', requireAuth, async (req, res) => {
+  try {
+    const termino = req.params.termino.trim();
+    // Buscar coincidencias exactas primero, luego coincidencias al inicio, luego parciales
+    const [rows] = await db.query(`
+      SELECT id, nombre, cargo, gerencia, correo FROM empleados
+      WHERE estado = "activo" AND LOWER(nombre) LIKE LOWER(?)
+      ORDER BY
+        CASE
+          WHEN LOWER(nombre) = LOWER(?) THEN 1
+          WHEN LOWER(nombre) LIKE LOWER(CONCAT(?, '%')) THEN 2
+          ELSE 3
+        END,
+        nombre ASC
+      LIMIT 10
+    `, [
+      `%${termino}%`,
+      termino,
+      termino
+    ]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET - Obtener empleado por nombre (para asignación de documentos/tareas)
+router.get('/nombre/:nombre', requireAuth, async (req, res) => {
+  try {
+    const nombreBusqueda = req.params.nombre.trim();
+    const [rows] = await db.query(
+      'SELECT id, nombre, correo, cargo, gerencia, telefono, estado FROM empleados WHERE LOWER(nombre) = LOWER(?) AND estado = "activo"',
+      [nombreBusqueda]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ error: 'Empleado no encontrado' });
+    }
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET - Obtener empleados por gerencia
+router.get('/gerencia/:gerencia', requireAuth, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT id, nombre, correo, cargo, gerencia FROM empleados WHERE gerencia = ? AND estado = "activo" ORDER BY nombre ASC',
+      [req.params.gerencia]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// RUTAS GENÉRICAS DESPUÉS (con parámetros)
+
 // GET - Obtener todos los empleados (requiere autenticación)
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -120,62 +193,6 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
     await db.query('DELETE FROM empleados WHERE id = ?', [req.params.id]);
     res.json({ ok: true, mensaje: 'Empleado eliminado exitosamente' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET - Obtener todos los empleados activos (para dropdowns)
-router.get('/activos/lista', requireAuth, async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      'SELECT id, nombre, cargo, gerencia, correo FROM empleados WHERE estado = "activo" ORDER BY gerencia ASC, nombre ASC'
-    );
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET - Obtener empleado por nombre (para asignación de documentos/tareas)
-router.get('/nombre/:nombre', requireAuth, async (req, res) => {
-  try {
-    const nombreBusqueda = req.params.nombre.trim();
-    const [rows] = await db.query(
-      'SELECT id, nombre, correo, cargo, gerencia, telefono, estado FROM empleados WHERE LOWER(nombre) = LOWER(?) AND estado = "activo"',
-      [nombreBusqueda]
-    );
-    if (!rows.length) {
-      return res.status(404).json({ error: 'Empleado no encontrado' });
-    }
-    res.json(rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET - Buscar empleados por coincidencia (autocompletar)
-router.get('/buscar/:termino', requireAuth, async (req, res) => {
-  try {
-    const termino = `%${req.params.termino}%`;
-    const [rows] = await db.query(
-      'SELECT id, nombre, cargo, gerencia FROM empleados WHERE LOWER(nombre) LIKE LOWER(?) AND estado = "activo" ORDER BY nombre ASC LIMIT 10',
-      [termino]
-    );
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET - Obtener empleados por gerencia
-router.get('/gerencia/:gerencia', requireAuth, async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      'SELECT id, nombre, correo, cargo, gerencia FROM empleados WHERE gerencia = ? AND estado = "activo" ORDER BY nombre ASC',
-      [req.params.gerencia]
-    );
-    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
