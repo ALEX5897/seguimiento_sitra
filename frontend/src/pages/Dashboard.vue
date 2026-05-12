@@ -28,33 +28,13 @@
 
     <!-- KPIs Detallados de Reasignados -->
     <div class="row mb-5">
-      <!-- Documentos Pendientes -->
-      <div class="col-lg-3 col-md-6 mb-4">
-        <div class="kpi-card pendientes">
-          <div class="kpi-icon">⏳</div>
-          <div class="kpi-title">Pendientes</div>
-          <div class="kpi-number">{{ kpiReasignados.pendientes }}</div>
-          <small class="kpi-subtitle">De {{ kpiReasignados.total }} total</small>
-        </div>
-      </div>
-
-      <!-- Documentos Vencidos -->
-      <div class="col-lg-3 col-md-6 mb-4">
-        <div class="kpi-card vencidos">
-          <div class="kpi-icon">⛔</div>
-          <div class="kpi-title">Vencidos</div>
-          <div class="kpi-number">{{ kpiReasignados.vencidos }}</div>
-          <small class="kpi-subtitle">Atención inmediata</small>
-        </div>
-      </div>
-
-      <!-- Próximos a Vencer -->
-      <div class="col-lg-3 col-md-6 mb-4">
-        <div class="kpi-card proximosvencer">
-          <div class="kpi-icon">⚠️</div>
-          <div class="kpi-title">Próximos a Vencer</div>
-          <div class="kpi-number">{{ kpiReasignados.proximosVencer }}</div>
-          <small class="kpi-subtitle">En 24 horas</small>
+      <!-- Documentos Pendientes Expirados -->
+      <div class="col-lg-6 col-md-6 mb-4">
+        <div class="kpi-card pendientes-expirados">
+          <div class="kpi-icon">🔴</div>
+          <div class="kpi-title">Pendientes Expirados</div>
+          <div class="kpi-number">{{ documentosPendientesExpirados }}</div>
+          <small class="kpi-subtitle">Requieren atención inmediata</small>
         </div>
       </div>
     </div>
@@ -218,6 +198,7 @@ export default {
         reasignados: 0,
         expirados: 0
       },
+      documentosPendientesExpirados: 0,
       kpiReasignados: {
         total: 0,
         pendientes: 0,
@@ -283,6 +264,15 @@ export default {
           const isExpired = new Date(r.fecha_max_respuesta) < new Date();
           const isExcluded = ['archivado', 'eliminado', 'enviado', 'completado', 'resuelto', 'cancelado'].includes(estado);
           return isExpired && !isExcluded;
+        }).length;
+
+        // Calcular documentos pendientes expirados
+        this.documentosPendientesExpirados = reasRes.data.filter(r => {
+          if (!r.fecha_max_respuesta) return false;
+          const estado = (r.estado || '').toString().toLowerCase().trim();
+          const isExpired = new Date(r.fecha_max_respuesta) < new Date();
+          const isPendiente = estado === 'en elaboracion' || estado === 'en tramite' || estado === 'pendiente';
+          return isExpired && isPendiente;
         }).length;
 
         // Load statistics (only reasignados-related)
@@ -513,16 +503,8 @@ export default {
   background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
 }
 
-.kpi-card.pendientes {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.kpi-card.vencidos {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-}
-
-.kpi-card.proximosvencer {
-  background: linear-gradient(135deg, #f5a623 0%, #f8a100 100%);
+.kpi-card.pendientes-expirados {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a2f 100%);
 }
 
 .kpi-subtitle {
