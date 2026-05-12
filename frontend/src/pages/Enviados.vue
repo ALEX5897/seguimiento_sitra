@@ -47,6 +47,7 @@
                 <th>Número Documento</th>
                 <th>Remitente</th>
                 <th>Para</th>
+                <th>Correo</th>
                 <th>Asunto</th>
                 <th>Tipo/Ref.</th>
                 <th>Estado</th>
@@ -59,6 +60,7 @@
                 <td><strong>{{ item.numero_documento }}</strong></td>
                 <td>{{ item.remitente }}</td>
                 <td><span>👤</span> {{ item.para }}</td>
+                <td><small class="text-muted">{{ item.correo || '-' }}</small></td>
                 <td><small>{{ item.asunto ? item.asunto.substring(0, 30) + '...' : '-' }}</small></td>
                 <td>
                   <small class="text-muted">

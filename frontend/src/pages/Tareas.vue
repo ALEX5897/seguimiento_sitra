@@ -47,6 +47,7 @@
                 <th>Situación</th>
                 <th>Número Documento</th>
                 <th>Asignado para</th>
+                <th>Correo</th>
                 <th>Avance</th>
                 <th>Estado</th>
                 <th>Acciones</th>
@@ -62,6 +63,7 @@
                 </td>
                 <td><strong>{{ item.numero_documento }}</strong></td>
                 <td><span>👤</span> {{ item.asignado_para }}</td>
+                <td><small class="text-muted">{{ item.correo || '-' }}</small></td>
                 <td>
                   <div class="progress" style="height: 20px;">
                     <div class="progress-bar" :style="{ width: (parseInt(item.avance) || 0) + '%' }">

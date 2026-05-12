@@ -7,24 +7,24 @@ const { requireAuth, canViewAll, getUserIdFromCorreo } = require('../middleware/
 router.get('/', requireAuth, async (req, res) => {
   try {
     const usuario = req.usuarioAuth;
-    let query = 'SELECT * FROM enviados';
+    let query = 'SELECT e.*, emp.correo FROM enviados e LEFT JOIN empleados emp ON e.usuario_id = emp.id';
     let params = [];
-    
+
     // Si el usuario no puede ver todo, filtrar solo sus documentos
     if (!canViewAll(usuario)) {
       // Obtener el usuario_id de la tabla usuarios basado en el correo
       const usuarioId = await getUserIdFromCorreo(db, usuario.correo);
-      
+
       if (usuarioId) {
-        query += ' WHERE usuario_id = ?';
+        query += ' WHERE e.usuario_id = ?';
         params.push(usuarioId);
       } else {
         // Si no existe en la tabla usuarios, no mostrar nada
         return res.json([]);
       }
     }
-    
-    query += ' ORDER BY id DESC LIMIT 100';
+
+    query += ' ORDER BY e.id DESC LIMIT 100';
     const [rows] = await db.query(query, params);
     res.json(rows);
   } catch (err) {

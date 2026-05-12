@@ -9,24 +9,24 @@ const { obtenerUsuario, crearNotificacionSistema } = require('../services/notifi
 router.get('/', requireAuth,async (req, res) => {
   try {
     const usuario = req.usuarioAuth;
-    let query = 'SELECT * FROM reasignados';
+    let query = 'SELECT r.*, e.correo FROM reasignados r LEFT JOIN empleados e ON r.usuario_id = e.id';
     let params = [];
-    
+
     // Si el usuario no puede ver todo, filtrar solo sus documentos
     if (!canViewAll(usuario)) {
       // Obtener el usuario_id de la tabla usuarios basado en el correo
       const usuarioId = await getUserIdFromCorreo(db, usuario.correo);
-      
+
       if (usuarioId) {
-        query += ' WHERE usuario_id = ?';
+        query += ' WHERE r.usuario_id = ?';
         params.push(usuarioId);
       } else {
         // Si no existe en la tabla usuarios, no mostrar nada
         return res.json([]);
       }
     }
-    
-    query += ' ORDER BY id DESC LIMIT 100';
+
+    query += ' ORDER BY r.id DESC LIMIT 100';
     const [rows] = await db.query(query, params);
     res.json(rows);
   } catch (err) {
@@ -43,7 +43,7 @@ router.post('/', async (req, res) => {
     }
 
     const [usuarios] = await db.query(
-      'SELECT id, nombre, correo FROM usuarios WHERE id = ? LIMIT 1',
+      'SELECT id, nombre, correo FROM empleados WHERE id = ? LIMIT 1',
       [b.usuario_id]
     );
 
@@ -59,22 +59,16 @@ router.post('/', async (req, res) => {
       [b.numero_documento || b.document_number || null, b.tipo_documento || null, b.importancia || null, b.numero_tramite || null, b.fecha_documento || b.date || null, b.fecha_reasignacion || null, b.fecha_max_respuesta || null, reasignadoNombre, usuarioSeleccionado.id, b.comentario || b.subject || null, b.respuesta || null, b.remitente || b.sender || null, b.destinatario || null, b.asunto || null, b.estado || b.status || null, JSON.stringify(b.extra || {})]
     );
 
-    // Enviar notificacion de documento reasignado creado
-    try {
-      const usuarioNotificacion = { correo: usuarioSeleccionado.correo || null, nombre: reasignadoNombre };
-      const documento = {
-        numero_documento: b.numero_documento || b.document_number || null,
-        numero_tramite: b.numero_tramite || null,
-        tipo_documento: b.tipo_documento || null,
-        remitente: b.remitente || b.sender || null,
-        destinatario: b.destinatario || null,
-        asunto: b.asunto || null,
-        fecha_max_respuesta: b.fecha_max_respuesta || null
-      };
-      await enviarNotificacionDocumentos(usuarioNotificacion, [documento], 'nuevo');
-    } catch (mailError) {
-      console.error('❌ Error enviando correo de documento nuevo:', mailError.message);
-    }
+    // Enviar notificacion en background (no bloquea la respuesta)
+    enviarNotificacionDocumentos({ correo: usuarioSeleccionado.correo || null, nombre: reasignadoNombre }, [{
+      numero_documento: b.numero_documento || b.document_number || null,
+      numero_tramite: b.numero_tramite || null,
+      tipo_documento: b.tipo_documento || null,
+      remitente: b.remitente || b.sender || null,
+      destinatario: b.destinatario || null,
+      asunto: b.asunto || null,
+      fecha_max_respuesta: b.fecha_max_respuesta || null
+    }], 'nuevo').catch(err => console.error('❌ Error enviando correo:', err.message));
 
     res.json({ id: result.insertId });
   } catch (err) {
@@ -104,7 +98,7 @@ router.put('/:id', async (req, res) => {
     }
 
     const [usuarios] = await db.query(
-      'SELECT id, nombre, correo FROM usuarios WHERE id = ? LIMIT 1',
+      'SELECT id, nombre, correo FROM empleados WHERE id = ? LIMIT 1',
       [b.usuario_id]
     );
 
@@ -159,7 +153,7 @@ router.put('/:id', async (req, res) => {
 
       if (usuarioIdAsignado) {
         const [usuarioAsignado] = await db.query(
-          'SELECT correo, nombre FROM usuarios WHERE id = ? LIMIT 1',
+          'SELECT correo, nombre FROM empleados WHERE id = ? LIMIT 1',
           [usuarioIdAsignado]
         );
         if (usuarioAsignado.length) {
@@ -171,10 +165,10 @@ router.put('/:id', async (req, res) => {
       if (!destinatarioCorreo) {
         destinatarioNombre = b.reasignado_a || (prev ? prev.reasignado_a : '') || 'Usuario';
         const [usuarioAsignado] = await db.query(
-          `SELECT correo, nombre FROM usuarios
-           WHERE nombre LIKE ? OR CONCAT(nombre, ' ', apellido) LIKE ?
+          `SELECT correo, nombre FROM empleados
+           WHERE nombre LIKE ?
            LIMIT 1`,
-          [`%${destinatarioNombre}%`, `%${destinatarioNombre}%`]
+          [`%${destinatarioNombre}%`]
         );
         if (usuarioAsignado.length) {
           destinatarioCorreo = usuarioAsignado[0].correo || '';
@@ -182,8 +176,9 @@ router.put('/:id', async (req, res) => {
         }
       }
 
+      // Enviar notificaciones en background (no bloquea la respuesta)
       if (destinatarioCorreo && destinatarioCorreo.includes('@')) {
-        await crearNotificacionSistema({
+        crearNotificacionSistema({
           usuario_id: usuarioIdAsignado || null,
           correo_usuario: destinatarioCorreo,
           reasignado_id: req.params.id,
@@ -192,16 +187,16 @@ router.put('/:id', async (req, res) => {
           titulo: `Estado actualizado en documento ${prev.numero_documento || 'N/A'}`,
           mensaje: `El estado cambio de "${estadoAnterior}" a "${nuevoEstado}"`,
           urlAccion: `/reasignados?doc=${req.params.id}`
-        });
+        }).catch(err => console.error('Error notificación:', err.message));
 
-        await enviarNotificacionCambioEstado({
+        enviarNotificacionCambioEstado({
           destinatario: destinatarioCorreo,
           nombre: destinatarioNombre,
           documento: prev.numero_documento || 'N/A',
           estadoAnterior,
           estadoNuevo: nuevoEstado,
           actor: autorNombre
-        });
+        }).catch(err => console.error('Error email:', err.message));
       }
     }
 

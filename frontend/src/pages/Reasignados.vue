@@ -56,6 +56,7 @@
                 <th>Nro. Trámite</th>
                 <th>Fecha Máx. Respuesta</th>
                 <th>Reasignado a</th>
+                <th>Correo</th>
                 <th>Estado</th>
                 <th>Acciones</th>
               </tr>
@@ -85,6 +86,7 @@
                 <td>{{ item.numero_tramite }}</td>
                 <td>{{ formatDate(getDeadline(item)) }}</td>
                 <td><span>👤</span> {{ item.reasignado_a }}</td>
+                <td><small class="text-muted">{{ item.correo || '-' }}</small></td>
                 <td><span class="badge bg-info">{{ item.estado }}</span></td>
                 <td>
                   <button class="btn btn-sm btn-primary" @click.prevent="openView(item)" title="Ver detalles">📄</button>
