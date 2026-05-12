@@ -60,16 +60,16 @@
                     <th>Descripción</th>
                     <th>Color</th>
                     <th>Estado</th>
-                    <th v-if="isAdmin">Acciones</th>
+                    <th v-if="isAdmin" style="width: 150px;">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="estado in estados" :key="estado.id">
+                  <tr v-for="estado in estados" :key="estado.id" :class="{ 'table-secondary': !estado.activo }">
                     <td><strong>#{{ estado.id }}</strong></td>
-                    <td><span style="font-size: 1.5rem;">{{ estado.icono }}</span></td>
+                    <td><span style="font-size: 1.5rem;">{{ estado.icono || '◯' }}</span></td>
                     <td><code>{{ estado.codigo }}</code></td>
                     <td><strong>{{ estado.nombre }}</strong></td>
-                    <td class="text-muted">{{ estado.descripcion || '-' }}</td>
+                    <td class="text-muted" style="max-width: 200px; white-space: normal;">{{ estado.descripcion || '-' }}</td>
                     <td>
                       <span
                         class="badge"
@@ -83,16 +83,19 @@
                           'bg-light text-dark': estado.color === 'light',
                           'bg-dark': estado.color === 'dark'
                         }">
-                        {{ estado.color }}
+                        {{ estado.color || 'ninguno' }}
                       </span>
                     </td>
                     <td>
-                      <span v-if="estado.activo" class="badge bg-success">Activo</span>
-                      <span v-else class="badge bg-secondary">Inactivo</span>
+                      <span v-if="estado.activo" class="badge bg-success">✓ Activo</span>
+                      <span v-else class="badge bg-secondary">✗ Inactivo</span>
                     </td>
                     <td v-if="isAdmin">
-                      <button class="btn btn-sm btn-primary" @click="openEdit(estado)" title="Editar">✏️</button>
-                      <button v-if="estado.activo" class="btn btn-sm btn-danger" @click="desactivar(estado.id)" title="Desactivar">🗑️</button>
+                      <div class="btn-group btn-group-sm">
+                        <button class="btn btn-primary" @click="openEdit(estado)" title="Editar" :disabled="isSaving">✏️</button>
+                        <button v-if="estado.activo" class="btn btn-danger" @click="desactivar(estado.id)" title="Desactivar" :disabled="isSaving">🗑️</button>
+                        <button v-else class="btn btn-success" @click="reactivar(estado.id)" title="Reactivar" :disabled="isSaving">↻</button>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -194,21 +197,24 @@ export default {
   },
   methods: {
     cargarPermiso() {
-      // Verificar si es administrador
       const rol = localStorage.getItem('userRole') || '';
       this.isAdmin = rol.toLowerCase().includes('admin');
     },
+
     async cargarEstados() {
       try {
         this.loading = true;
         const response = await api.get('/catalogos/estados-reasignados');
-        this.estados = response.data;
+        this.estados = response.data || [];
+        console.log('✓ Estados cargados:', this.estados.length);
       } catch (err) {
-        showToast('Error cargando estados: ' + err.message, 'error');
+        showToast('❌ Error cargando estados: ' + err.message, 'error');
+        console.error('Error:', err);
       } finally {
         this.loading = false;
       }
     },
+
     openCreate() {
       this.editingId = null;
       this.form = {
@@ -221,19 +227,48 @@ export default {
       };
       this.abrirModal();
     },
+
     openEdit(estado) {
       this.editingId = estado.id;
       this.form = { ...estado };
       this.abrirModal();
     },
+
     abrirModal() {
       const modal = new window.bootstrap.Modal(document.getElementById('modalEstado'));
       modal.show();
     },
+
+    validarFormulario() {
+      const errores = [];
+
+      if (!this.form.codigo || this.form.codigo.trim() === '') {
+        errores.push('El código es requerido');
+      } else if (!/^[a-z_]+$/.test(this.form.codigo)) {
+        errores.push('El código debe contener solo letras minúsculas y guiones bajos');
+      }
+
+      if (!this.form.nombre || this.form.nombre.trim() === '') {
+        errores.push('El nombre es requerido');
+      } else if (this.form.nombre.length > 100) {
+        errores.push('El nombre no puede exceder 100 caracteres');
+      }
+
+      if (this.form.icono && this.form.icono.length > 2) {
+        errores.push('El icono debe ser máximo 2 caracteres');
+      }
+
+      if (errores.length > 0) {
+        showToast('⚠️ ' + errores[0], 'warning');
+        return false;
+      }
+
+      return true;
+    },
+
     async save() {
       try {
-        if (!this.form.codigo || !this.form.nombre) {
-          showToast('Código y Nombre son requeridos', 'warning');
+        if (!this.validarFormulario()) {
           return;
         }
 
@@ -241,35 +276,97 @@ export default {
 
         if (this.editingId) {
           // Actualizar
-          await api.put(`/catalogos/estados-reasignados/${this.editingId}`, this.form);
-          showToast('✓ Estado actualizado', 'success');
+          console.log('Actualizando estado:', this.editingId);
+          await api.put(`/catalogos/estados-reasignados/${this.editingId}`, {
+            nombre: this.form.nombre,
+            descripcion: this.form.descripcion,
+            icono: this.form.icono,
+            color: this.form.color,
+            activo: this.form.activo
+          });
+          showToast('✓ Estado actualizado correctamente', 'success');
         } else {
           // Crear
-          await api.post('/catalogos/estados-reasignados', this.form);
-          showToast('✓ Estado creado', 'success');
+          console.log('Creando nuevo estado:', this.form.codigo);
+          await api.post('/catalogos/estados-reasignados', {
+            codigo: this.form.codigo.toLowerCase(),
+            nombre: this.form.nombre,
+            descripcion: this.form.descripcion,
+            icono: this.form.icono,
+            color: this.form.color
+          });
+          showToast('✓ Estado creado correctamente', 'success');
         }
 
         // Cerrar modal
-        const modal = window.bootstrap.Modal.getInstance(document.getElementById('modalEstado'));
-        modal.hide();
+        const modalEl = document.getElementById('modalEstado');
+        const modal = window.bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        // Limpiar formulario
+        this.form = {};
+        this.editingId = null;
 
         // Recargar
         await this.cargarEstados();
       } catch (err) {
-        showToast('Error: ' + err.message, 'error');
+        console.error('Error al guardar:', err);
+        const mensaje = err.response?.data?.error || err.message;
+        showToast('❌ Error: ' + mensaje, 'error');
       } finally {
         this.isSaving = false;
       }
     },
+
     async desactivar(id) {
-      if (!await confirmAction('¿Desactivar este estado?')) return;
+      const estado = this.estados.find(e => e.id === id);
+      if (!estado) return;
+
+      if (!await confirmAction(`¿Desactivar el estado "${estado.nombre}"?`)) {
+        return;
+      }
 
       try {
+        this.isSaving = true;
+        console.log('Desactivando estado:', id);
         await api.delete(`/catalogos/estados-reasignados/${id}`);
-        showToast('✓ Estado desactivado', 'success');
+        showToast(`✓ Estado "${estado.nombre}" desactivado`, 'success');
         await this.cargarEstados();
       } catch (err) {
-        showToast('Error: ' + err.message, 'error');
+        console.error('Error al desactivar:', err);
+        const mensaje = err.response?.data?.error || err.message;
+        showToast('❌ Error: ' + mensaje, 'error');
+      } finally {
+        this.isSaving = false;
+      }
+    },
+
+    async reactivar(id) {
+      const estado = this.estados.find(e => e.id === id);
+      if (!estado) return;
+
+      if (!await confirmAction(`¿Reactivar el estado "${estado.nombre}"?`)) {
+        return;
+      }
+
+      try {
+        this.isSaving = true;
+        console.log('Reactivando estado:', id);
+        await api.put(`/catalogos/estados-reasignados/${id}`, {
+          nombre: estado.nombre,
+          descripcion: estado.descripcion,
+          icono: estado.icono,
+          color: estado.color,
+          activo: true
+        });
+        showToast(`✓ Estado "${estado.nombre}" reactivado`, 'success');
+        await this.cargarEstados();
+      } catch (err) {
+        console.error('Error al reactivar:', err);
+        const mensaje = err.response?.data?.error || err.message;
+        showToast('❌ Error: ' + mensaje, 'error');
+      } finally {
+        this.isSaving = false;
       }
     }
   }
