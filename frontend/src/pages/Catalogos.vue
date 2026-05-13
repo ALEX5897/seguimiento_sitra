@@ -11,15 +11,22 @@
       <ul class="nav nav-tabs" role="tablist">
         <li class="nav-item" role="presentation">
           <button
-            class="nav-link active"
-            id="estados-tab"
-            data-bs-toggle="tab"
-            data-bs-target="#estados-content"
+            class="nav-link"
+            :class="{ active: activeTab === 'estados' }"
+            @click="activeTab = 'estados'"
             type="button"
-            role="tab"
-            aria-controls="estados-content"
-            aria-selected="true">
+            role="tab">
             <i class="bi bi-tags me-2"></i>Estados de Reasignados
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link"
+            :class="{ active: activeTab === 'importancias' }"
+            @click="activeTab = 'importancias'"
+            type="button"
+            role="tab">
+            <i class="bi bi-exclamation-circle me-2"></i>Importancias
           </button>
         </li>
       </ul>
@@ -28,11 +35,11 @@
     <!-- Tab content -->
     <div class="tab-content">
       <!-- Estados de Reasignados -->
-      <div class="tab-pane fade show active" id="estados-content" role="tabpanel" aria-labelledby="estados-tab">
+      <div v-if="activeTab === 'estados'" class="tab-pane fade show active">
         <!-- Acciones -->
         <div class="row mb-4">
           <div class="col-auto">
-            <button @click="openCreate" class="btn btn-success" v-if="isAdmin">
+            <button @click="openCreateEstado" class="btn btn-success" v-if="isAdmin">
               ➕ Nuevo Estado
             </button>
           </div>
@@ -92,9 +99,9 @@
                     </td>
                     <td v-if="isAdmin">
                       <div class="btn-group btn-group-sm">
-                        <button class="btn btn-primary" @click="openEdit(estado)" title="Editar" :disabled="isSaving">✏️</button>
-                        <button v-if="estado.activo" class="btn btn-danger" @click="desactivar(estado.id)" title="Desactivar" :disabled="isSaving">🗑️</button>
-                        <button v-else class="btn btn-success" @click="reactivar(estado.id)" title="Reactivar" :disabled="isSaving">↻</button>
+                        <button class="btn btn-primary" @click="openEditEstado(estado)" title="Editar" :disabled="isSaving">✏️</button>
+                        <button v-if="estado.activo" class="btn btn-danger" @click="desactivarEstado(estado.id)" title="Desactivar" :disabled="isSaving">🗑️</button>
+                        <button v-else class="btn btn-success" @click="reactivarEstado(estado.id)" title="Reactivar" :disabled="isSaving">↻</button>
                       </div>
                     </td>
                   </tr>
@@ -102,6 +109,87 @@
               </table>
               <div v-else class="text-center py-4 text-muted">
                 <span>ℹ️</span> Sin catálogos disponibles
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Importancias -->
+      <div v-if="activeTab === 'importancias'" class="tab-pane fade show active">
+        <!-- Acciones -->
+        <div class="row mb-4">
+          <div class="col-auto">
+            <button @click="openCreateImportancia" class="btn btn-success" v-if="isAdmin">
+              ➕ Nueva Importancia
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabla de Importancias -->
+        <div class="card">
+          <div class="card-header bg-light">
+            <span>⚡</span> Importancias
+          </div>
+          <div class="card-body">
+            <div v-if="loading" class="text-center py-4">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+            </div>
+            <div v-else class="table-responsive">
+              <table class="table table-hover mb-0" v-if="importancias.length > 0">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Icono</th>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Color</th>
+                    <th>Estado</th>
+                    <th v-if="isAdmin" style="width: 150px;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="imp in importancias" :key="imp.id" :class="{ 'table-secondary': !imp.activo }">
+                    <td><strong>#{{ imp.id }}</strong></td>
+                    <td><span style="font-size: 1.5rem;">{{ imp.icono || '◯' }}</span></td>
+                    <td><code>{{ imp.codigo }}</code></td>
+                    <td><strong>{{ imp.nombre }}</strong></td>
+                    <td class="text-muted" style="max-width: 200px; white-space: normal;">{{ imp.descripcion || '-' }}</td>
+                    <td>
+                      <span
+                        class="badge"
+                        :class="{
+                          'bg-primary': imp.color === 'primary',
+                          'bg-secondary': imp.color === 'secondary',
+                          'bg-success': imp.color === 'success',
+                          'bg-danger': imp.color === 'danger',
+                          'bg-warning text-dark': imp.color === 'warning',
+                          'bg-info': imp.color === 'info',
+                          'bg-light text-dark': imp.color === 'light',
+                          'bg-dark': imp.color === 'dark'
+                        }">
+                        {{ imp.color || 'ninguno' }}
+                      </span>
+                    </td>
+                    <td>
+                      <span v-if="imp.activo" class="badge bg-success">✓ Activo</span>
+                      <span v-else class="badge bg-secondary">✗ Inactivo</span>
+                    </td>
+                    <td v-if="isAdmin">
+                      <div class="btn-group btn-group-sm">
+                        <button class="btn btn-primary" @click="openEditImportancia(imp)" title="Editar" :disabled="isSaving">✏️</button>
+                        <button v-if="imp.activo" class="btn btn-danger" @click="desactivarImportancia(imp.id)" title="Desactivar" :disabled="isSaving">🗑️</button>
+                        <button v-else class="btn btn-success" @click="reactivarImportancia(imp.id)" title="Reactivar" :disabled="isSaving">↻</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div v-else class="text-center py-4 text-muted">
+                <span>ℹ️</span> Sin importancias disponibles
               </div>
             </div>
           </div>
@@ -184,21 +272,35 @@ export default {
   data() {
     return {
       estados: [],
+      importancias: [],
       form: {},
       editingId: null,
       loading: false,
       isSaving: false,
-      isAdmin: false
+      isAdmin: false,
+      activeTab: 'estados',
+      usuarioActual: null
     };
   },
   mounted() {
     this.cargarPermiso();
     this.cargarEstados();
+    this.cargarImportancias();
   },
   methods: {
-    cargarPermiso() {
-      const rol = localStorage.getItem('userRole') || '';
-      this.isAdmin = rol.toLowerCase().includes('admin');
+    async cargarPermiso() {
+      try {
+        const response = await api.get('/auth/usuario');
+        if (response.data && response.data.usuario) {
+          this.usuarioActual = response.data.usuario;
+          const rol = (response.data.usuario.rol || '').toLowerCase();
+          this.isAdmin = rol.includes('admin');
+          console.log('✓ Rol cargado:', response.data.usuario.rol, 'isAdmin:', this.isAdmin);
+        }
+      } catch (error) {
+        console.error('Error cargando permiso:', error);
+        this.isAdmin = false;
+      }
     },
 
     async cargarEstados() {
@@ -215,7 +317,19 @@ export default {
       }
     },
 
-    openCreate() {
+    async cargarImportancias() {
+      try {
+        const response = await api.get('/catalogos/importancias');
+        this.importancias = response.data || [];
+        console.log('✓ Importancias cargadas:', this.importancias.length);
+      } catch (err) {
+        console.error('Error cargando importancias:', err);
+        this.importancias = [];
+      }
+    },
+
+    openCreateEstado() {
+      this.activeTab = 'estados';
       this.editingId = null;
       this.form = {
         codigo: '',
@@ -228,9 +342,31 @@ export default {
       this.abrirModal();
     },
 
-    openEdit(estado) {
+    openEditEstado(estado) {
+      this.activeTab = 'estados';
       this.editingId = estado.id;
       this.form = { ...estado };
+      this.abrirModal();
+    },
+
+    openCreateImportancia() {
+      this.activeTab = 'importancias';
+      this.editingId = null;
+      this.form = {
+        codigo: '',
+        nombre: '',
+        descripcion: '',
+        icono: '',
+        color: 'primary',
+        activo: true
+      };
+      this.abrirModal();
+    },
+
+    openEditImportancia(imp) {
+      this.activeTab = 'importancias';
+      this.editingId = imp.id;
+      this.form = { ...imp };
       this.abrirModal();
     },
 
@@ -273,29 +409,31 @@ export default {
         }
 
         this.isSaving = true;
+        const isEstado = this.activeTab === 'estados';
+        const endpoint = isEstado ? '/catalogos/estados-reasignados' : '/catalogos/importancias';
 
         if (this.editingId) {
           // Actualizar
-          console.log('Actualizando estado:', this.editingId);
-          await api.put(`/catalogos/estados-reasignados/${this.editingId}`, {
+          console.log(`Actualizando ${isEstado ? 'estado' : 'importancia'}:`, this.editingId);
+          await api.put(`${endpoint}/${this.editingId}`, {
             nombre: this.form.nombre,
             descripcion: this.form.descripcion,
             icono: this.form.icono,
             color: this.form.color,
             activo: this.form.activo
           });
-          showToast('✓ Estado actualizado correctamente', 'success');
+          showToast(`✓ ${isEstado ? 'Estado' : 'Importancia'} actualizado correctamente`, 'success');
         } else {
           // Crear
-          console.log('Creando nuevo estado:', this.form.codigo);
-          await api.post('/catalogos/estados-reasignados', {
+          console.log(`Creando nuevo ${isEstado ? 'estado' : 'importancia'}:`, this.form.codigo);
+          await api.post(endpoint, {
             codigo: this.form.codigo.toLowerCase(),
             nombre: this.form.nombre,
             descripcion: this.form.descripcion,
             icono: this.form.icono,
             color: this.form.color
           });
-          showToast('✓ Estado creado correctamente', 'success');
+          showToast(`✓ ${isEstado ? 'Estado' : 'Importancia'} creado correctamente`, 'success');
         }
 
         // Cerrar modal
@@ -308,7 +446,11 @@ export default {
         this.editingId = null;
 
         // Recargar
-        await this.cargarEstados();
+        if (isEstado) {
+          await this.cargarEstados();
+        } else {
+          await this.cargarImportancias();
+        }
       } catch (err) {
         console.error('Error al guardar:', err);
         const mensaje = err.response?.data?.error || err.message;
@@ -318,7 +460,7 @@ export default {
       }
     },
 
-    async desactivar(id) {
+    async desactivarEstado(id) {
       const estado = this.estados.find(e => e.id === id);
       if (!estado) return;
 
@@ -328,20 +470,18 @@ export default {
 
       try {
         this.isSaving = true;
-        console.log('Desactivando estado:', id);
         await api.delete(`/catalogos/estados-reasignados/${id}`);
         showToast(`✓ Estado "${estado.nombre}" desactivado`, 'success');
         await this.cargarEstados();
       } catch (err) {
-        console.error('Error al desactivar:', err);
-        const mensaje = err.response?.data?.error || err.message;
-        showToast('❌ Error: ' + mensaje, 'error');
+        console.error('Error:', err);
+        showToast('❌ Error: ' + (err.response?.data?.error || err.message), 'error');
       } finally {
         this.isSaving = false;
       }
     },
 
-    async reactivar(id) {
+    async reactivarEstado(id) {
       const estado = this.estados.find(e => e.id === id);
       if (!estado) return;
 
@@ -351,7 +491,6 @@ export default {
 
       try {
         this.isSaving = true;
-        console.log('Reactivando estado:', id);
         await api.put(`/catalogos/estados-reasignados/${id}`, {
           nombre: estado.nombre,
           descripcion: estado.descripcion,
@@ -362,9 +501,56 @@ export default {
         showToast(`✓ Estado "${estado.nombre}" reactivado`, 'success');
         await this.cargarEstados();
       } catch (err) {
-        console.error('Error al reactivar:', err);
-        const mensaje = err.response?.data?.error || err.message;
-        showToast('❌ Error: ' + mensaje, 'error');
+        console.error('Error:', err);
+        showToast('❌ Error: ' + (err.response?.data?.error || err.message), 'error');
+      } finally {
+        this.isSaving = false;
+      }
+    },
+
+    async desactivarImportancia(id) {
+      const imp = this.importancias.find(i => i.id === id);
+      if (!imp) return;
+
+      if (!await confirmAction(`¿Desactivar la importancia "${imp.nombre}"?`)) {
+        return;
+      }
+
+      try {
+        this.isSaving = true;
+        await api.delete(`/catalogos/importancias/${id}`);
+        showToast(`✓ Importancia "${imp.nombre}" desactivada`, 'success');
+        await this.cargarImportancias();
+      } catch (err) {
+        console.error('Error:', err);
+        showToast('❌ Error: ' + (err.response?.data?.error || err.message), 'error');
+      } finally {
+        this.isSaving = false;
+      }
+    },
+
+    async reactivarImportancia(id) {
+      const imp = this.importancias.find(i => i.id === id);
+      if (!imp) return;
+
+      if (!await confirmAction(`¿Reactivar la importancia "${imp.nombre}"?`)) {
+        return;
+      }
+
+      try {
+        this.isSaving = true;
+        await api.put(`/catalogos/importancias/${id}`, {
+          nombre: imp.nombre,
+          descripcion: imp.descripcion,
+          icono: imp.icono,
+          color: imp.color,
+          activo: true
+        });
+        showToast(`✓ Importancia "${imp.nombre}" reactivada`, 'success');
+        await this.cargarImportancias();
+      } catch (err) {
+        console.error('Error:', err);
+        showToast('❌ Error: ' + (err.response?.data?.error || err.message), 'error');
       } finally {
         this.isSaving = false;
       }

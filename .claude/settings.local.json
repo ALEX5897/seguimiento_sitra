@@ -44,7 +44,15 @@
       "Bash(grep -n \"^  }$\" \"C:\\\\Users\\\\acasa\\\\OneDrive - QuitoTurismo\\\\Documentos\\\\Desarrollo\\\\Sis_asignacion de memos\\\\seguimiento_sitra\\\\frontend\\\\src\\\\pages\\\\Reasignados.vue\")",
       "Bash(node backend/seed_acasa_test.js)",
       "Bash(node backend/ejecutar_migracion_catalogo.js)",
-      "Bash(node backend/verificar_catalogo.js)"
+      "Bash(node backend/verificar_catalogo.js)",
+      "Bash(grep -A 5 '\"scripts\"' backend/package.json)",
+      "Bash(grep -A 5 '\"scripts\"' frontend/package.json)",
+      "Bash(npx vue-tsc *)",
+      "Bash(pkill -f \"node.*index.js\")",
+      "Bash(pkill -f \"vite\")",
+      "Bash(netstat -tulpn)",
+      "Bash(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
+      "PowerShell(netstat *)"
     ]
   }
 }

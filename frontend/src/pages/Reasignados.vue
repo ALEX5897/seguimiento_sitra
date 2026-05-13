@@ -335,12 +335,11 @@
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label fw-bold">Importancia</label>
-                  <select v-model="form.importancia" class="form-select">
-                    <option value="">-- Seleccionar --</option>
-                    <option value="Baja">🟢 Baja</option>
-                    <option value="Media">🟡 Media</option>
-                    <option value="Alta">🔴 Alta</option>
-                    <option value="Urgente">⚠️ Urgente</option>
+                  <select v-model="form.importancia" class="form-select" :disabled="loadingImportancias">
+                    <option value="">-- Seleccionar importancia --</option>
+                    <option v-for="imp in importancias" :key="imp.id" :value="imp.nombre">
+                      {{ imp.icono ? imp.icono + ' ' : '' }}{{ imp.nombre }}
+                    </option>
                   </select>
                 </div>
               </div>
@@ -388,7 +387,9 @@ export default {
       filtroTipo: null,
       filtroActivo: null,
       estados: [],
-      loadingEstados: false
+      importancias: [],
+      loadingEstados: false,
+      loadingImportancias: false
     }
   },
   mounted() {
@@ -396,6 +397,7 @@ export default {
     window.addEventListener('sistra:data-updated', this.refreshHandler);
     this.cargarUsuarioActual()
     this.cargarEstados()
+    this.cargarImportancias()
     this.load().then(() => {
       // Aplicar filtro si viene en query params
       const filtro = this.$route.query.filtro
@@ -524,6 +526,19 @@ export default {
         this.loadingEstados = false;
       }
     },
+    async cargarImportancias() {
+      try {
+        this.loadingImportancias = true;
+        const response = await api.get('/catalogos/importancias');
+        this.importancias = response.data || [];
+        console.log('✓ Importancias cargadas:', this.importancias.length);
+      } catch (error) {
+        console.error('Error cargando importancias:', error);
+        this.importancias = [];
+      } finally {
+        this.loadingImportancias = false;
+      }
+    },
     async load() {
       try {
         const r = await api.get('/reasignados');
@@ -600,17 +615,15 @@ export default {
         }
       }
 
-      // Normalizar importancia: capitalizar correctamente
-      if (this.form.importancia) {
-        const importanciaNormalizada = {
-          'baja': 'Baja',
-          'media': 'Media',
-          'alta': 'Alta',
-          'urgente': 'Urgente'
-        }[this.form.importancia.toLowerCase().trim()];
-        if (importanciaNormalizada) {
-          this.form.importancia = importanciaNormalizada;
-          console.log('✓ Importancia normalizada a:', importanciaNormalizada);
+      // Normalizar importancia: buscar coincidencia en el catálogo
+      if (this.form.importancia && this.importancias.length > 0) {
+        const impBase = (this.form.importancia || '').toString().toLowerCase().trim();
+        const impNormalizada = this.importancias.find(i =>
+          i.nombre && i.nombre.toLowerCase().trim() === impBase
+        );
+        if (impNormalizada) {
+          this.form.importancia = impNormalizada.nombre;
+          console.log('✓ Importancia normalizada a:', impNormalizada.nombre);
         }
       }
 
