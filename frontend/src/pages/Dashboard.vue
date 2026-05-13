@@ -674,15 +674,45 @@ export default {
       const modal = new window.bootstrap.Modal(document.getElementById('modalDetalleDocumento'));
       modal.show();
     },
+    formatearFecha(fecha) {
+      if (!fecha) return null;
+      const date = new Date(fecha);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    },
     async guardarCambios() {
       if (!this.documentoSeleccionado) return;
       this.isSaving = true;
       try {
         console.log('Guardando cambios para documento:', this.documentoSeleccionado.id);
         console.log('Nuevo estado:', this.documentoSeleccionado.estado);
-        console.log('Documento completo:', this.documentoSeleccionado);
 
-        await api.put(`/reasignados/${this.documentoSeleccionado.id}`, this.documentoSeleccionado);
+        const datosActualizados = {
+          numero_documento: this.documentoSeleccionado.numero_documento,
+          tipo_documento: this.documentoSeleccionado.tipo_documento || null,
+          importancia: this.documentoSeleccionado.importancia || null,
+          numero_tramite: this.documentoSeleccionado.numero_tramite || null,
+          fecha_documento: this.formatearFecha(this.documentoSeleccionado.fecha_documento),
+          fecha_reasignacion: this.formatearFecha(this.documentoSeleccionado.fecha_reasignacion),
+          fecha_max_respuesta: this.formatearFecha(this.documentoSeleccionado.fecha_max_respuesta),
+          reasignado_a: this.documentoSeleccionado.reasignado_a,
+          usuario_id: this.documentoSeleccionado.usuario_id,
+          comentario: this.documentoSeleccionado.comentario || null,
+          respuesta: this.documentoSeleccionado.respuesta || null,
+          remitente: this.documentoSeleccionado.remitente || null,
+          destinatario: this.documentoSeleccionado.destinatario || null,
+          asunto: this.documentoSeleccionado.asunto || null,
+          estado: this.documentoSeleccionado.estado,
+          extra: this.documentoSeleccionado.extra || null
+        };
+
+        console.log('Datos a guardar:', datosActualizados);
+        await api.put(`/reasignados/${this.documentoSeleccionado.id}`, datosActualizados);
         console.log('✓ Documento actualizado');
         alert('✓ Estado actualizado correctamente');
         // Cerrar modal
