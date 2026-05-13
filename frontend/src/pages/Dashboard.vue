@@ -480,13 +480,15 @@ export default {
 
             if (isExpired) {
               expiredDocuments.push({
+                ...item,
                 id: item.id,
                 numero_documento: item.numero_documento,
                 reasignado_a: item.reasignado_a || 'Sin asignar',
                 fecha_max_respuesta: item.fecha_max_respuesta,
-                estado: item.estado
+                estado: item.estado,
+                usuario_id: item.usuario_id
               });
-              console.log('Found expired:', item.numero_documento, 'Fecha max:', item.fecha_max_respuesta, 'Estado:', item.estado);
+              console.log('Found expired:', item.numero_documento, 'Fecha max:', item.fecha_max_respuesta, 'Estado:', item.estado, 'Usuario ID:', item.usuario_id);
             }
           }
         });
@@ -676,10 +678,13 @@ export default {
       if (!this.documentoSeleccionado) return;
       this.isSaving = true;
       try {
-        await api.put(`/reasignados/${this.documentoSeleccionado.id}`, {
-          estado: this.documentoSeleccionado.estado
-        });
+        console.log('Guardando cambios para documento:', this.documentoSeleccionado.id);
+        console.log('Nuevo estado:', this.documentoSeleccionado.estado);
+        console.log('Documento completo:', this.documentoSeleccionado);
+
+        await api.put(`/reasignados/${this.documentoSeleccionado.id}`, this.documentoSeleccionado);
         console.log('✓ Documento actualizado');
+        alert('✓ Estado actualizado correctamente');
         // Cerrar modal
         const modal = window.bootstrap.Modal.getInstance(document.getElementById('modalDetalleDocumento'));
         if (modal) modal.hide();
@@ -687,7 +692,8 @@ export default {
         this.loadData();
       } catch (err) {
         console.error('Error guardando cambios:', err);
-        alert('Error al guardar: ' + (err.response?.data?.message || err.message));
+        console.error('Respuesta del servidor:', err.response?.data);
+        alert('Error al guardar: ' + (err.response?.data?.message || err.response?.data?.error || err.message));
       } finally {
         this.isSaving = false;
       }
