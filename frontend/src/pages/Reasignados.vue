@@ -17,9 +17,9 @@
       </div>
     </div>
 
-    <!-- Filtros Activos y Buscador Global -->
-    <div class="row mb-3 align-items-center">
-      <div class="col-md-6">
+    <!-- Buscador Global -->
+    <div class="row mb-3">
+      <div class="col-12">
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-search"></i></span>
           <input
@@ -34,15 +34,71 @@
           </button>
         </div>
       </div>
-      <div class="col-md-6 text-end text-muted small">
-        <div v-if="filtroActivo" class="mb-2">
-          <span class="badge bg-primary me-2">
-            {{ filtroActivo }}
-            <button @click="limpiarFiltro" class="btn-close btn-close-white ms-2" style="width: 0.6rem; height: 0.6rem;"></button>
-          </span>
+    </div>
+
+    <!-- Filtros Avanzados -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="row g-3">
+          <!-- Filtro por Funcionario -->
+          <div class="col-md-3">
+            <label class="form-label fw-bold small">👤 Funcionario</label>
+            <select v-model="filtros.funcionario" class="form-select form-select-sm">
+              <option value="">-- Todos --</option>
+              <option v-for="func in funcionarios" :key="func" :value="func">
+                {{ func }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Filtro por Tipo de Documento -->
+          <div class="col-md-3">
+            <label class="form-label fw-bold small">📄 Tipo Documento</label>
+            <select v-model="filtros.tipoDocumento" class="form-select form-select-sm">
+              <option value="">-- Todos --</option>
+              <option v-for="tipo in tiposDocumento" :key="tipo" :value="tipo">
+                {{ tipo }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Filtro por Estado -->
+          <div class="col-md-3">
+            <label class="form-label fw-bold small">🏷️ Estado</label>
+            <select v-model="filtros.estado" class="form-select form-select-sm">
+              <option value="">-- Todos --</option>
+              <option v-for="est in estadosDisponibles" :key="est" :value="est">
+                {{ est }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Filtro por Situación -->
+          <div class="col-md-3">
+            <label class="form-label fw-bold small">⚡ Situación</label>
+            <select v-model="filtros.situacion" class="form-select form-select-sm">
+              <option value="">-- Todas --</option>
+              <option value="expirado">❌ Expirado</option>
+              <option value="proximo">⚠️ Próximo a vencer</option>
+              <option value="atime">✓ A tiempo</option>
+              <option value="sinplazo">- Sin plazo</option>
+            </select>
+          </div>
         </div>
-        {{ itemsFiltrados.length }} resultado(s)
-        <span v-if="busqueda"> para "<strong>{{ busqueda }}</strong>"</span>
+
+        <!-- Resumen de Filtros -->
+        <div class="row mt-3">
+          <div class="col-12">
+            <div class="text-muted small">
+              <span class="me-3">
+                <strong>{{ itemsFiltrados.length }}</strong> resultado(s)
+              </span>
+              <button @click="limpiarFiltros" class="btn btn-sm btn-outline-secondary">
+                🔄 Limpiar Filtros
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -389,7 +445,16 @@ export default {
       estados: [],
       importancias: [],
       loadingEstados: false,
-      loadingImportancias: false
+      loadingImportancias: false,
+      filtros: {
+        funcionario: '',
+        tipoDocumento: '',
+        estado: '',
+        situacion: ''
+      },
+      funcionarios: [],
+      tiposDocumento: [],
+      estadosDisponibles: []
     }
   },
   mounted() {
@@ -431,6 +496,18 @@ export default {
       }
     },
     busqueda() {
+      this.paginaActual = 1
+    },
+    'filtros.funcionario'() {
+      this.paginaActual = 1
+    },
+    'filtros.tipoDocumento'() {
+      this.paginaActual = 1
+    },
+    'filtros.estado'() {
+      this.paginaActual = 1
+    },
+    'filtros.situacion'() {
       this.paginaActual = 1
     }
   },
@@ -474,6 +551,48 @@ export default {
               return estado === 'resuelto'
             case 'archivado':
               return estado === 'archivado'
+            default:
+              return true
+          }
+        })
+      }
+
+      // Aplicar filtros avanzados
+      if (this.filtros.funcionario) {
+        result = result.filter(item => item.reasignado_a === this.filtros.funcionario)
+      }
+
+      if (this.filtros.tipoDocumento) {
+        result = result.filter(item => item.tipo_documento === this.filtros.tipoDocumento)
+      }
+
+      if (this.filtros.estado) {
+        result = result.filter(item => item.estado === this.filtros.estado)
+      }
+
+      if (this.filtros.situacion) {
+        result = result.filter(item => {
+          const now = new Date()
+          const estado = (item.estado || '').toString().toLowerCase().trim()
+
+          switch (this.filtros.situacion) {
+            case 'expirado':
+              if (!item.fecha_max_respuesta) return false
+              return new Date(item.fecha_max_respuesta) < now && estado === 'pendiente'
+            case 'proximo':
+              if (!item.fecha_max_respuesta) return false
+              const nowDate = new Date()
+              nowDate.setHours(0, 0, 0, 0)
+              const tomorrow = new Date(nowDate.getTime() + 24 * 60 * 60 * 1000)
+              const fechaMax = new Date(item.fecha_max_respuesta)
+              fechaMax.setHours(0, 0, 0, 0)
+              return fechaMax >= nowDate && fechaMax <= tomorrow && estado === 'pendiente'
+            case 'atime':
+              if (!item.fecha_max_respuesta) return false
+              const tomorrow2 = new Date(new Date().getTime() + 24 * 60 * 60 * 1000)
+              return new Date(item.fecha_max_respuesta) > tomorrow2 && estado === 'pendiente'
+            case 'sinplazo':
+              return !item.fecha_max_respuesta || item.fecha_max_respuesta === ''
             default:
               return true
           }
@@ -548,6 +667,10 @@ export default {
       try {
         const r = await api.get('/reasignados');
         this.items = r.data;
+        // Cargar filtros dinámicos
+        this.cargarFuncionarios();
+        this.cargarTiposDocumento();
+        this.cargarEstadosDisponibles();
       } catch (e) {
         this.items = []
       }
@@ -977,6 +1100,44 @@ export default {
       this.filtroActivo = null
       this.paginaActual = 1
       this.$router.replace({ query: {} })
+    },
+    limpiarFiltros() {
+      this.filtros.funcionario = ''
+      this.filtros.tipoDocumento = ''
+      this.filtros.estado = ''
+      this.filtros.situacion = ''
+      this.busqueda = ''
+      this.paginaActual = 1
+    },
+    cargarFuncionarios() {
+      // Obtener funcionarios únicos de los items
+      const funcionariosSet = new Set()
+      this.items.forEach(item => {
+        if (item.reasignado_a) {
+          funcionariosSet.add(item.reasignado_a)
+        }
+      })
+      this.funcionarios = Array.from(funcionariosSet).sort()
+    },
+    cargarTiposDocumento() {
+      // Obtener tipos de documento únicos de los items
+      const tiposSet = new Set()
+      this.items.forEach(item => {
+        if (item.tipo_documento) {
+          tiposSet.add(item.tipo_documento)
+        }
+      })
+      this.tiposDocumento = Array.from(tiposSet).sort()
+    },
+    cargarEstadosDisponibles() {
+      // Obtener estados únicos de los items
+      const estadosSet = new Set()
+      this.items.forEach(item => {
+        if (item.estado) {
+          estadosSet.add(item.estado)
+        }
+      })
+      this.estadosDisponibles = Array.from(estadosSet).sort()
     }
   }
 }
