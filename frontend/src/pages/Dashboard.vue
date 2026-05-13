@@ -66,20 +66,22 @@
                 <thead>
                   <tr>
                     <th>Usuario</th>
-                    <th>Área</th>
-                    <th>Expirados</th>
+                    <th>Número de Documento</th>
+                    <th>Días Expirados</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="row in expiredByUser" :key="row.usuario_id">
-                    <td><strong>👤 {{ row.nombre }}</strong></td>
-                    <td>{{ row.gerencia || '-' }}</td>
-                    <td><span class="badge bg-danger">{{ row.count }}</span></td>
+                  <tr v-for="doc in expiredByUser" :key="doc.id" class="table-danger">
+                    <td><strong>👤 {{ doc.reasignado_a }}</strong></td>
+                    <td><code>{{ doc.numero_documento }}</code></td>
+                    <td>
+                      <span class="badge bg-danger">{{ getDiasExpirados(doc.fecha_max_respuesta) }} días</span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
               <div v-else class="text-center py-4 text-muted">
-                <span>✓</span> Sin expirados
+                <span>✓</span> Sin documentos expirados
               </div>
             </div>
           </div>
@@ -403,55 +405,52 @@ export default {
     },
     async loadExpiredByUser() {
       try {
-        console.log('Loading expired by user...');
+        console.log('Loading expired documents...');
         const res = await api.get('/reasignados');
         const now = new Date();
-        const expiredByUser = {};
-        
+        const expiredDocuments = [];
+
         console.log('Reasignados for expired check:', res.data.length);
-        
+
         res.data.forEach(item => {
           if (item.fecha_max_respuesta) {
             const fecha = new Date(item.fecha_max_respuesta);
             const estado = (item.estado || '').toString().toLowerCase().trim();
             const isExcluded = ['archivado', 'eliminado', 'enviado', 'completado', 'resuelto', 'cancelado'].includes(estado);
             const isExpired = fecha < now && !isExcluded;
-            
+
             if (isExpired) {
-              const userId = item.usuario_id || 'sin_asignar';
-              if (!expiredByUser[userId]) {
-                expiredByUser[userId] = {
-                  usuario_id: userId,
-                  nombre: item.reasignado_a || 'Sin asignar',
-                  gerencia: '',
-                  count: 0
-                };
-              }
-              expiredByUser[userId].count++;
+              expiredDocuments.push({
+                id: item.id,
+                numero_documento: item.numero_documento,
+                reasignado_a: item.reasignado_a || 'Sin asignar',
+                fecha_max_respuesta: item.fecha_max_respuesta,
+                estado: item.estado
+              });
               console.log('Found expired:', item.numero_documento, 'Fecha max:', item.fecha_max_respuesta, 'Estado:', item.estado);
             }
           }
         });
 
-        // Obtener información de usuarios
-        try {
-          const usuariosRes = await api.get('/usuarios/activos/lista');
-          Object.keys(expiredByUser).forEach(userId => {
-            const usuario = usuariosRes.data.find(u => u.id == userId);
-            if (usuario) {
-              expiredByUser[userId].nombre = usuario.nombre;
-              expiredByUser[userId].gerencia = usuario.gerencia;
-            }
-          });
-        } catch (err) {
-          console.warn('Error loading usuarios info');
-        }
+        // Ordenar por días más expirados primero
+        this.expiredByUser = expiredDocuments.sort((a, b) => {
+          const diasA = this.getDiasExpirados(a.fecha_max_respuesta);
+          const diasB = this.getDiasExpirados(b.fecha_max_respuesta);
+          return diasB - diasA;
+        });
 
-        this.expiredByUser = Object.values(expiredByUser).sort((a, b) => b.count - a.count);
-        console.log('Expired by user:', this.expiredByUser);
+        console.log('Expired documents:', this.expiredByUser);
       } catch (err) {
-        console.error('Error loading expired by user:', err);
+        console.error('Error loading expired documents:', err);
       }
+    },
+    getDiasExpirados(fecha) {
+      if (!fecha) return 0;
+      const fechaMax = new Date(fecha);
+      const now = new Date();
+      const diffTime = now.getTime() - fechaMax.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(0, diffDays);
     },
     async loadUpcomingExpiry() {
       try {
