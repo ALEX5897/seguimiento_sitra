@@ -397,12 +397,17 @@
 
               <div class="mb-3">
                 <label for="gerencia-emp" class="form-label">Gerencia</label>
-                <input
+                <select
                   id="gerencia-emp"
                   v-model="formularioEmpleado.gerencia"
-                  type="text"
-                  class="form-control"
-                />
+                  class="form-select"
+                >
+                  <option value="">-- Seleccionar Gerencia --</option>
+                  <option value="Sin Gerencia">Sin Gerencia</option>
+                  <option v-for="gerencia in gerencias" :key="gerencia.id" :value="gerencia.nombre">
+                    {{ gerencia.nombre }}
+                  </option>
+                </select>
               </div>
 
               <div class="mb-3">
@@ -469,6 +474,7 @@ export default {
       usuarios: [],
       empleados: [],
       roles: [],
+      gerencias: [],
       busqueda: '',
       busquedaEmpleado: '',
       filtroRol: '',
@@ -536,6 +542,7 @@ export default {
     this.cargarUsuarios();
     this.cargarEmpleados();
     this.cargarRoles();
+    this.cargarGerencias();
   },
   methods: {
     cambiarTab(tab) {
@@ -570,6 +577,16 @@ export default {
         this.roles = response.data.roles || [];
       } catch (err) {
         this.mostrarAlerta('Error al cargar roles: ' + (err.response?.data?.error || err.message), 'danger');
+      }
+    },
+
+    async cargarGerencias() {
+      try {
+        const response = await api.get('/catalogos/gerencias');
+        this.gerencias = (response.data || []).filter(g => g.activo);
+      } catch (err) {
+        console.error('Error al cargar gerencias:', err);
+        this.gerencias = [];
       }
     },
 
