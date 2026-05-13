@@ -326,13 +326,11 @@
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label fw-bold">Estado</label>
-                  <select v-model="form.estado" class="form-select">
+                  <select v-model="form.estado" class="form-select" :disabled="loadingEstados">
                     <option value="">-- Seleccionar estado --</option>
-                    <option value="en elaboracion">en elaboracion</option>
-                    <option value="en tramite">en tramite</option>
-                    <option value="eliminado">eliminado</option>
-                    <option value="archivado">archivado</option>
-                    <option value="enviado">enviado</option>
+                    <option v-for="estado in estados" :key="estado.id" :value="estado.nombre">
+                      {{ estado.icono ? estado.icono + ' ' : '' }}{{ estado.nombre }}
+                    </option>
                   </select>
                 </div>
                 <div class="col-md-6 mb-3">
@@ -388,13 +386,16 @@ export default {
       paginaActual: 1,
       porPagina: 15,
       filtroTipo: null,
-      filtroActivo: null
+      filtroActivo: null,
+      estados: [],
+      loadingEstados: false
     }
   },
   mounted() {
     this.refreshHandler = () => this.load();
     window.addEventListener('sistra:data-updated', this.refreshHandler);
     this.cargarUsuarioActual()
+    this.cargarEstados()
     this.load().then(() => {
       // Aplicar filtro si viene en query params
       const filtro = this.$route.query.filtro
@@ -510,6 +511,19 @@ export default {
         console.error('Error cargando usuario actual:', error);
       }
     },
+    async cargarEstados() {
+      try {
+        this.loadingEstados = true;
+        const response = await api.get('/catalogos/estados-reasignados');
+        this.estados = response.data || [];
+        console.log('✓ Estados cargados:', this.estados.length);
+      } catch (error) {
+        console.error('Error cargando estados:', error);
+        this.estados = [];
+      } finally {
+        this.loadingEstados = false;
+      }
+    },
     async load() {
       try {
         const r = await api.get('/reasignados');
@@ -535,7 +549,10 @@ export default {
     },
     openCreate() {
       if (this.esSoloLectura) return;
-      this.form = {};
+      this.form = {
+        importancia: 'Media',
+        estado: 'pendiente'
+      };
       this.pastedData = '';
       this.usuarioSeleccionado = null;
       this.editingId = null;
@@ -694,6 +711,14 @@ export default {
         this.form.tipo_documento = values[9].trim();
         this.form.numero_tramite = values[10].trim();
         this.form.estado = values[11].trim();
+
+        // Establecer valores por defecto si no están definidos
+        if (!this.form.importancia) {
+          this.form.importancia = 'Media';
+        }
+        if (!this.form.estado) {
+          this.form.estado = 'pendiente';
+        }
 
         // Buscar y seleccionar usuario automáticamente
         await this.buscarYSeleccionarUsuario(nombreReasignado);
