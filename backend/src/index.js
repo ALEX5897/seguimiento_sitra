@@ -129,6 +129,7 @@ app.use('/api/admin/usuarios', admin);
 app.use('/api/admin/notificaciones', notificacionesConfig);
 app.use('/api/catalogos', catalogos);
 app.use('/api/debug', debug);
+app.use('/api/debug-session', require('./routes/debug-session'));
 app.use('/api', comentarios);
 
 // TEMPORAL: Endpoint público para test de correo (solo para testing)
