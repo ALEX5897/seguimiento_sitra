@@ -1,8 +1,8 @@
 <template>
   <div class="p-4">
-    <!-- All KPI Cards in one row - Clickeable para filtros -->
+    <!-- All KPI Cards - Clickeable para filtros -->
     <div class="row mb-5">
-      <div class="col-lg-3 col-md-6 mb-4">
+      <div class="col-lg-2-4 col-md-4 mb-4">
         <div class="kpi-card reasignados kpi-clickable" @click="goToReasignados()">
           <div class="kpi-icon">📋</div>
           <div class="kpi-title">Reasignados</div>
@@ -10,7 +10,7 @@
           <small class="kpi-subtitle">Total de documentos</small>
         </div>
       </div>
-      <div class="col-lg-3 col-md-6 mb-4">
+      <div class="col-lg-2-4 col-md-4 mb-4">
         <div class="kpi-card pendientes kpi-clickable" @click="goToReasignados('pendientes')">
           <div class="kpi-icon">⏳</div>
           <div class="kpi-title">Pendientes</div>
@@ -18,7 +18,7 @@
           <small class="kpi-subtitle">En estado pendiente</small>
         </div>
       </div>
-      <div class="col-lg-3 col-md-6 mb-4">
+      <div class="col-lg-2-4 col-md-4 mb-4">
         <div class="kpi-card vencidos kpi-clickable" @click="goToReasignados('vencidos')">
           <div class="kpi-icon">⛔</div>
           <div class="kpi-title">Vencidos</div>
@@ -26,12 +26,20 @@
           <small class="kpi-subtitle">Plazo vencido</small>
         </div>
       </div>
-      <div class="col-lg-3 col-md-6 mb-4">
+      <div class="col-lg-2-4 col-md-4 mb-4">
         <div class="kpi-card proximosvencer kpi-clickable" @click="goToReasignados('proximosvencer')">
           <div class="kpi-icon">⚠️</div>
           <div class="kpi-title">Próximos a Vencer</div>
           <div class="kpi-number">{{ counts.proximosVencer }}</div>
           <small class="kpi-subtitle">En 24 horas</small>
+        </div>
+      </div>
+      <div class="col-lg-2-4 col-md-4 mb-4">
+        <div class="kpi-card completos kpi-clickable" @click="goToReasignados('completos')">
+          <div class="kpi-icon">✓</div>
+          <div class="kpi-title">Completos</div>
+          <div class="kpi-number">{{ counts.completos }}</div>
+          <small class="kpi-subtitle">Documentos completados</small>
         </div>
       </div>
     </div>
@@ -195,7 +203,8 @@ export default {
         reasignados: 0,
         pendientes: 0,
         vencidos: 0,
-        proximosVencer: 0
+        proximosVencer: 0,
+        completos: 0
       },
       kpiReasignados: {
         total: 0,
@@ -283,6 +292,12 @@ export default {
           const fechaMax = new Date(r.fecha_max_respuesta);
           const isInRange = fechaMax > now && fechaMax <= tomorrow;
           return estado === 'pendiente' && isInRange;
+        }).length;
+
+        // Contar completos: estado = 'completo'
+        this.counts.completos = docs.filter(r => {
+          const estado = (r.estado || '').toString().toLowerCase().trim();
+          return estado === 'completo';
         }).length;
 
         // Load statistics (only reasignados-related)
@@ -496,6 +511,13 @@ export default {
   color: #333;
 }
 
+@media (min-width: 992px) {
+  .col-lg-2-4 {
+    flex: 0 0 20%;
+    max-width: 20%;
+  }
+}
+
 .kpi-card {
   padding: 20px;
   border-radius: 10px;
@@ -536,6 +558,10 @@ export default {
 
 .kpi-card.proximosvencer {
   background: linear-gradient(135deg, #f5a623 0%, #f8a100 100%);
+}
+
+.kpi-card.completos {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
 }
 
 .kpi-subtitle {
