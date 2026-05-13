@@ -582,7 +582,38 @@ export default {
       this.form.fecha_max_respuesta = formatDate(this.form.fecha_max_respuesta);
 
       console.log('📋 Item cargado para edición:', item);
-      console.log('📋 Fecha máx. respuesta formateada:', this.form.fecha_max_respuesta);
+      console.log('📋 Estado del item:', item.estado);
+      console.log('📋 Importancia del item:', item.importancia);
+      console.log('📋 Estados disponibles:', this.estados);
+
+      // Normalizar estado: buscar coincidencia exacta en el catálogo
+      if (this.form.estado && this.estados.length > 0) {
+        const estadoBase = (this.form.estado || '').toString().toLowerCase().trim();
+        const estadoNormalizado = this.estados.find(e =>
+          e.nombre && e.nombre.toLowerCase().trim() === estadoBase
+        );
+        if (estadoNormalizado) {
+          this.form.estado = estadoNormalizado.nombre;
+          console.log('✓ Estado normalizado a:', estadoNormalizado.nombre);
+        } else {
+          console.warn('⚠️ No se encontró estado coincidente para:', this.form.estado);
+        }
+      }
+
+      // Normalizar importancia: capitalizar correctamente
+      if (this.form.importancia) {
+        const importanciaNormalizada = {
+          'baja': 'Baja',
+          'media': 'Media',
+          'alta': 'Alta',
+          'urgente': 'Urgente'
+        }[this.form.importancia.toLowerCase().trim()];
+        if (importanciaNormalizada) {
+          this.form.importancia = importanciaNormalizada;
+          console.log('✓ Importancia normalizada a:', importanciaNormalizada);
+        }
+      }
+
       this.pastedData = '';
       this.usuarioSeleccionado = null;
       this.editingId = item.id;
