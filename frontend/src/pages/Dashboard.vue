@@ -61,7 +61,7 @@
             <span>👥</span> Documentos Expirados (por Usuario)
           </div>
           <div class="card-body">
-            <div class="table-responsive">
+            <div class="table-responsive expired-table-container">
               <table class="table table-hover mb-0" v-if="expiredByUser.length > 0">
                 <thead>
                   <tr>
@@ -415,9 +415,7 @@ export default {
         res.data.forEach(item => {
           if (item.fecha_max_respuesta) {
             const fecha = new Date(item.fecha_max_respuesta);
-            const estado = (item.estado || '').toString().toLowerCase().trim();
-            const isExcluded = ['archivado', 'eliminado', 'enviado', 'completado', 'resuelto', 'cancelado'].includes(estado);
-            const isExpired = fecha < now && !isExcluded;
+            const isExpired = fecha < now;
 
             if (isExpired) {
               expiredDocuments.push({
@@ -614,6 +612,30 @@ export default {
     flex: 0 0 20%;
     max-width: 20%;
   }
+}
+
+.expired-table-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 0.25rem;
+}
+
+.expired-table-container table {
+  margin-bottom: 0;
+}
+
+.expired-table-container thead {
+  position: sticky;
+  top: 0;
+  background-color: #f8f9fa;
+  z-index: 10;
+}
+
+.expired-table-container thead th {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  padding: 0.75rem;
 }
 
 .kpi-card {
