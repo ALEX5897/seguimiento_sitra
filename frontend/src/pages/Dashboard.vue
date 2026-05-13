@@ -469,14 +469,17 @@ export default {
         console.log('Loading expired documents...');
         const res = await api.get('/reasignados');
         const now = new Date();
+        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         const expiredDocuments = [];
 
         console.log('Reasignados for expired check:', res.data.length);
 
         res.data.forEach(item => {
           if (item.fecha_max_respuesta) {
+            const estado = (item.estado || '').toString().toLowerCase().trim();
             const fecha = new Date(item.fecha_max_respuesta);
-            const isExpired = fecha < now;
+            // Solo documentos en estado pendiente con MÁS de 1 día vencidos (fecha_max_respuesta < yesterday)
+            const isExpired = estado === 'pendiente' && fecha < yesterday;
 
             if (isExpired) {
               expiredDocuments.push({
@@ -488,7 +491,7 @@ export default {
                 estado: item.estado,
                 usuario_id: item.usuario_id
               });
-              console.log('Found expired:', item.numero_documento, 'Fecha max:', item.fecha_max_respuesta, 'Estado:', item.estado, 'Usuario ID:', item.usuario_id);
+              console.log('Found expired:', item.numero_documento, 'Fecha max:', item.fecha_max_respuesta, 'Estado:', item.estado, 'Días expirados:', this.getDiasExpirados(item.fecha_max_respuesta));
             }
           }
         });
@@ -500,7 +503,7 @@ export default {
           return diasB - diasA;
         });
 
-        console.log('Expired documents:', this.expiredByUser);
+        console.log('Expired documents (pendiente, > 1 día):', this.expiredByUser);
       } catch (err) {
         console.error('Error loading expired documents:', err);
       }
@@ -528,14 +531,14 @@ export default {
           const fecha = new Date(item.fecha_max_respuesta);
           fecha.setHours(0, 0, 0, 0);
           const estado = (item.estado || '').toString().toLowerCase().trim();
-          const isExcluded = ['archivado', 'eliminado', 'enviado', 'completado', 'resuelto', 'cancelado'].includes(estado);
-          const isInRange = fecha >= now && fecha <= tomorrow && !isExcluded;
+          // Solo documentos en estado pendiente a 1 día de expirar (entre hoy y mañana inclusivo)
+          const isInRange = estado === 'pendiente' && fecha >= now && fecha <= tomorrow;
           if (isInRange) {
             console.log('Upcoming:', item.numero_documento, 'Fecha:', item.fecha_max_respuesta, 'Estado:', item.estado);
           }
           return isInRange;
         }).sort((a, b) => new Date(a.fecha_max_respuesta) - new Date(b.fecha_max_respuesta));
-        console.log('Upcoming expiry items:', this.upcomingExpiry.length);
+        console.log('Upcoming expiry items (pendiente, 1 día):', this.upcomingExpiry.length);
       } catch (err) {
         console.error('Error loading upcoming expiry:', err);
       }
