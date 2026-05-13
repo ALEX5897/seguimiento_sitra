@@ -1,0 +1,25 @@
+[Unit]
+Description=Seguimiento SITRA - Backend Node.js
+After=network.target
+Wants=seguimiento-sitra-monitor.service
+
+[Service]
+Type=simple
+User=acasa
+WorkingDirectory=/opt/seguimiento_sitra/backend
+ExecStart=/usr/bin/node /opt/seguimiento_sitra/backend/src/index.js
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Variables de entorno
+Environment="NODE_ENV=production"
+Environment="PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+# Limites
+LimitNOFILE=65535
+LimitNPROC=65535
+
+[Install]
+WantedBy=multi-user.target
