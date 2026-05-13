@@ -42,6 +42,15 @@
           <small class="kpi-subtitle">Documentos completados</small>
         </div>
       </div>
+      <div class="col-lg-2-4 col-md-4 mb-4">
+        <div class="kpi-card otros kpi-clickable" @click="mostrarEstadosOtros">
+          <div class="kpi-icon">❓</div>
+          <div class="kpi-title">Otros</div>
+          <div class="kpi-number">{{ counts.otros }}</div>
+          <small class="kpi-subtitle" v-if="estadosDistintos.length > 0">{{ estadosDistintos.join(', ') }}</small>
+          <small class="kpi-subtitle" v-else>Sin otros estados</small>
+        </div>
+      </div>
     </div>
 
     <!-- Tabla de Usuarios con Expirados -->
@@ -204,8 +213,10 @@ export default {
         pendientes: 0,
         vencidos: 0,
         proximosVencer: 0,
-        completos: 0
+        completos: 0,
+        otros: 0
       },
+      estadosDistintos: [],
       kpiReasignados: {
         total: 0,
         pendientes: 0,
@@ -310,6 +321,41 @@ export default {
           const estado = (r.estado || '').toString().toLowerCase().trim();
           return estado === 'completo';
         }).length;
+
+        // Contar "otros": documentos que no encajen en las categorías anteriores
+        const estadosContados = new Set();
+        docs.forEach(r => {
+          const estado = (r.estado || '').toString().toLowerCase().trim();
+          const fechaMax = new Date(r.fecha_max_respuesta);
+          fechaMax.setHours(0, 0, 0, 0);
+
+          const esPendiente = estado === 'pendiente' && fechaMax > tomorrow;
+          const esVencido = estado === 'pendiente' && fechaMax < yesterday;
+          const esProximoVencer = estado === 'pendiente' && fechaMax >= now && fechaMax <= tomorrow;
+          const esCompleto = estado === 'completo';
+
+          if (!esPendiente && !esVencido && !esProximoVencer && !esCompleto) {
+            estadosContados.add(estado);
+          }
+        });
+
+        this.counts.otros = docs.filter(r => {
+          const estado = (r.estado || '').toString().toLowerCase().trim();
+          const fechaMax = new Date(r.fecha_max_respuesta);
+          fechaMax.setHours(0, 0, 0, 0);
+
+          const esPendiente = estado === 'pendiente' && fechaMax > tomorrow;
+          const esVencido = estado === 'pendiente' && fechaMax < yesterday;
+          const esProximoVencer = estado === 'pendiente' && fechaMax >= now && fechaMax <= tomorrow;
+          const esCompleto = estado === 'completo';
+
+          return !esPendiente && !esVencido && !esProximoVencer && !esCompleto;
+        }).length;
+
+        // Guardar estados distintos para debugging
+        this.estadosDistintos = Array.from(estadosContados);
+        console.log('Estados no contabilizados:', this.estadosDistintos);
+        console.log('Resumen: Reasignados:', this.counts.reasignados, 'Pendientes:', this.counts.pendientes, 'Vencidos:', this.counts.vencidos, 'Próximos:', this.counts.proximosVencer, 'Completos:', this.counts.completos, 'Otros:', this.counts.otros, 'Total:', this.counts.pendientes + this.counts.vencidos + this.counts.proximosVencer + this.counts.completos + this.counts.otros);
 
         // Load statistics (only reasignados-related)
         console.log('Loading reasignados statistics...');
@@ -510,6 +556,11 @@ export default {
     goToReasignados(filtro = null) {
       const query = filtro ? { filtro } : {};
       this.$router.push({ path: '/reasignados', query });
+    },
+    mostrarEstadosOtros() {
+      if (this.estadosDistintos.length > 0) {
+        alert(`Estados no contabilizados: ${this.estadosDistintos.join(', ')}`);
+      }
     }
   }
 };
@@ -573,6 +624,10 @@ export default {
 
 .kpi-card.completos {
   background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.kpi-card.otros {
+  background: linear-gradient(135deg, #8e9296 0%, #b0b3b8 100%);
 }
 
 .kpi-subtitle {
