@@ -94,7 +94,7 @@
             <span>⏰</span> Próximos a Expirar (1 día)
           </div>
           <div class="card-body">
-            <div class="table-responsive">
+            <div class="table-responsive expired-table-container">
               <table class="table table-hover mb-0" v-if="upcomingExpiry.length > 0">
                 <thead>
                   <tr>
@@ -104,7 +104,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="doc in upcomingExpiry" :key="doc.id" class="table-warning">
+                  <tr v-for="doc in upcomingExpiry" :key="doc.id" class="table-warning cursor-pointer" @click="abrirModalDocumento(doc)" style="cursor: pointer;">
                     <td><strong>{{ doc.numero_documento }}</strong></td>
                     <td>{{ doc.reasignado_a }}</td>
                     <td>
