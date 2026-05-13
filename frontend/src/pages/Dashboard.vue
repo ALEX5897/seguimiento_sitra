@@ -2,43 +2,35 @@
   <div class="p-4">
     <!-- All KPI Cards in one row - Clickeable para filtros -->
     <div class="row mb-5">
-      <div class="col-lg-2 col-md-4 mb-4">
+      <div class="col-lg-3 col-md-6 mb-4">
         <div class="kpi-card reasignados kpi-clickable" @click="goToReasignados()">
           <div class="kpi-icon">📋</div>
           <div class="kpi-title">Reasignados</div>
           <div class="kpi-number">{{ counts.reasignados }}</div>
-          <small class="kpi-subtitle">Ver todos →</small>
+          <small class="kpi-subtitle">Total de documentos</small>
         </div>
       </div>
-      <div class="col-lg-2 col-md-4 mb-4">
-        <div class="kpi-card expirados kpi-clickable" @click="goToReasignados('expirados')">
-          <div class="kpi-icon">⚠️</div>
-          <div class="kpi-title">Expirados</div>
-          <div class="kpi-number">{{ counts.expirados }}</div>
-          <small class="kpi-subtitle">Requieren atención</small>
-        </div>
-      </div>
-      <div class="col-lg-2 col-md-4 mb-4">
+      <div class="col-lg-3 col-md-6 mb-4">
         <div class="kpi-card pendientes kpi-clickable" @click="goToReasignados('pendientes')">
           <div class="kpi-icon">⏳</div>
           <div class="kpi-title">Pendientes</div>
-          <div class="kpi-number">{{ kpiReasignados.pendientes }}</div>
-          <small class="kpi-subtitle">De {{ kpiReasignados.total }} total</small>
+          <div class="kpi-number">{{ counts.pendientes }}</div>
+          <small class="kpi-subtitle">En estado pendiente</small>
         </div>
       </div>
-      <div class="col-lg-2 col-md-4 mb-4">
+      <div class="col-lg-3 col-md-6 mb-4">
         <div class="kpi-card vencidos kpi-clickable" @click="goToReasignados('vencidos')">
           <div class="kpi-icon">⛔</div>
           <div class="kpi-title">Vencidos</div>
-          <div class="kpi-number">{{ kpiReasignados.vencidos }}</div>
-          <small class="kpi-subtitle">Atención inmediata</small>
+          <div class="kpi-number">{{ counts.vencidos }}</div>
+          <small class="kpi-subtitle">Plazo vencido</small>
         </div>
       </div>
-      <div class="col-lg-2 col-md-4 mb-4">
+      <div class="col-lg-3 col-md-6 mb-4">
         <div class="kpi-card proximosvencer kpi-clickable" @click="goToReasignados('proximosvencer')">
           <div class="kpi-icon">⚠️</div>
           <div class="kpi-title">Próximos a Vencer</div>
-          <div class="kpi-number">{{ kpiReasignados.proximosVencer }}</div>
+          <div class="kpi-number">{{ counts.proximosVencer }}</div>
           <small class="kpi-subtitle">En 24 horas</small>
         </div>
       </div>
@@ -201,7 +193,9 @@ export default {
     return {
       counts: {
         reasignados: 0,
-        expirados: 0
+        pendientes: 0,
+        vencidos: 0,
+        proximosVencer: 0
       },
       kpiReasignados: {
         total: 0,
@@ -257,17 +251,38 @@ export default {
     async loadData() {
       try {
         console.log('Loading dashboard data...');
-        
+
         // Load reasignados
         const reasRes = await api.get('/reasignados');
         console.log('Reasignados:', reasRes.data);
-        this.counts.reasignados = reasRes.data.length;
-        this.counts.expirados = reasRes.data.filter(r => {
+        const docs = reasRes.data || [];
+        const now = new Date();
+        const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+        // Contar todos los reasignados
+        this.counts.reasignados = docs.length;
+
+        // Contar pendientes: estado = 'pendiente'
+        this.counts.pendientes = docs.filter(r => {
+          const estado = (r.estado || '').toString().toLowerCase().trim();
+          return estado === 'pendiente';
+        }).length;
+
+        // Contar vencidos: estado = 'pendiente' Y fecha_max_respuesta < hoy
+        this.counts.vencidos = docs.filter(r => {
           if (!r.fecha_max_respuesta) return false;
           const estado = (r.estado || '').toString().toLowerCase().trim();
-          const isExpired = new Date(r.fecha_max_respuesta) < new Date();
-          const isExcluded = ['archivado', 'eliminado', 'enviado', 'completado', 'resuelto', 'cancelado'].includes(estado);
-          return isExpired && !isExcluded;
+          const isExpired = new Date(r.fecha_max_respuesta) < now;
+          return estado === 'pendiente' && isExpired;
+        }).length;
+
+        // Contar próximos a vencer: estado = 'pendiente' Y fecha_max_respuesta está a 1 día
+        this.counts.proximosVencer = docs.filter(r => {
+          if (!r.fecha_max_respuesta) return false;
+          const estado = (r.estado || '').toString().toLowerCase().trim();
+          const fechaMax = new Date(r.fecha_max_respuesta);
+          const isInRange = fechaMax > now && fechaMax <= tomorrow;
+          return estado === 'pendiente' && isInRange;
         }).length;
 
         // Load statistics (only reasignados-related)
