@@ -29,6 +29,16 @@
             <i class="bi bi-exclamation-circle me-2"></i>Importancias
           </button>
         </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link"
+            :class="{ active: activeTab === 'gerencias' }"
+            @click="activeTab = 'gerencias'"
+            type="button"
+            role="tab">
+            <i class="bi bi-diagram-3 me-2"></i>Gerencias
+          </button>
+        </li>
       </ul>
     </div>
 
@@ -195,6 +205,68 @@
           </div>
         </div>
       </div>
+
+      <!-- Gerencias -->
+      <div v-if="activeTab === 'gerencias'" class="tab-pane fade show active">
+        <!-- Acciones -->
+        <div class="row mb-4">
+          <div class="col-auto">
+            <button @click="openCreateGerencia" class="btn btn-success" v-if="isAdmin">
+              ➕ Nueva Gerencia
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabla de Gerencias -->
+        <div class="card">
+          <div class="card-header bg-light">
+            <span>🏢</span> Gerencias
+          </div>
+          <div class="card-body">
+            <div v-if="loading" class="text-center py-4">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+            </div>
+            <div v-else class="table-responsive">
+              <table class="table table-hover mb-0" v-if="gerencias.length > 0">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Estado</th>
+                    <th v-if="isAdmin" style="width: 150px;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="gerencia in gerencias" :key="gerencia.id" :class="{ 'table-secondary': !gerencia.activo }">
+                    <td><strong>#{{ gerencia.id }}</strong></td>
+                    <td><code>{{ gerencia.codigo }}</code></td>
+                    <td><strong>{{ gerencia.nombre }}</strong></td>
+                    <td class="text-muted" style="max-width: 300px; white-space: normal;">{{ gerencia.descripcion || '-' }}</td>
+                    <td>
+                      <span v-if="gerencia.activo" class="badge bg-success">✓ Activo</span>
+                      <span v-else class="badge bg-secondary">✗ Inactivo</span>
+                    </td>
+                    <td v-if="isAdmin">
+                      <div class="btn-group btn-group-sm">
+                        <button class="btn btn-primary" @click="openEditGerencia(gerencia)" title="Editar" :disabled="isSaving">✏️</button>
+                        <button v-if="gerencia.activo" class="btn btn-danger" @click="desactivarGerencia(gerencia.id)" title="Desactivar" :disabled="isSaving">🗑️</button>
+                        <button v-else class="btn btn-success" @click="reactivarGerencia(gerencia.id)" title="Reactivar" :disabled="isSaving">↻</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div v-else class="text-center py-4 text-muted">
+                <span>ℹ️</span> Sin gerencias disponibles
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modal de Crear/Editar -->
@@ -202,30 +274,34 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">{{ editingId ? 'Editar Estado' : 'Nuevo Estado' }}</h5>
+            <h5 class="modal-title">
+              <span v-if="activeTab === 'estados'">{{ editingId ? 'Editar Estado' : 'Nuevo Estado' }}</span>
+              <span v-else-if="activeTab === 'importancias'">{{ editingId ? 'Editar Importancia' : 'Nueva Importancia' }}</span>
+              <span v-else-if="activeTab === 'gerencias'">{{ editingId ? 'Editar Gerencia' : 'Nueva Gerencia' }}</span>
+            </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <form @submit.prevent="save">
-              <div class="mb-3">
+              <div v-if="activeTab !== 'gerencias'" class="mb-3">
                 <label class="form-label fw-bold">Código *</label>
                 <input v-model="form.codigo" type="text" class="form-control" placeholder="ej: pendiente" required :disabled="editingId" />
                 <small class="text-muted">No se puede cambiar después de crear</small>
               </div>
               <div class="mb-3">
                 <label class="form-label fw-bold">Nombre *</label>
-                <input v-model="form.nombre" type="text" class="form-control" placeholder="ej: Pendiente" required />
+                <input v-model="form.nombre" type="text" class="form-control" :placeholder="activeTab === 'gerencias' ? 'ej: Dirección Administrativa' : 'ej: Pendiente'" required />
               </div>
               <div class="mb-3">
                 <label class="form-label fw-bold">Descripción</label>
-                <textarea v-model="form.descripcion" class="form-control" rows="3" placeholder="Descripción del estado..."></textarea>
+                <textarea v-model="form.descripcion" class="form-control" rows="3" :placeholder="activeTab === 'gerencias' ? 'Descripción de la gerencia...' : 'Descripción...'" ></textarea>
               </div>
-              <div class="mb-3">
+              <div v-if="activeTab !== 'gerencias'" class="mb-3">
                 <label class="form-label fw-bold">Icono</label>
                 <input v-model="form.icono" type="text" class="form-control" placeholder="ej: ⏳" maxlength="2" />
                 <small class="text-muted">Un emoji (opcional)</small>
               </div>
-              <div class="mb-3">
+              <div v-if="activeTab !== 'gerencias'" class="mb-3">
                 <label class="form-label fw-bold">Color Bootstrap</label>
                 <select v-model="form.color" class="form-select">
                   <option value="">-- Sin color --</option>
@@ -278,6 +354,7 @@ export default {
     return {
       estados: [],
       importancias: [],
+      gerencias: [],
       form: {},
       editingId: null,
       loading: false,
@@ -291,6 +368,7 @@ export default {
     this.cargarPermiso();
     this.cargarEstados();
     this.cargarImportancias();
+    this.cargarGerencias();
   },
   methods: {
     async cargarPermiso() {
@@ -330,6 +408,17 @@ export default {
       } catch (err) {
         console.error('Error cargando importancias:', err);
         this.importancias = [];
+      }
+    },
+
+    async cargarGerencias() {
+      try {
+        const response = await api.get('/catalogos/gerencias');
+        this.gerencias = response.data || [];
+        console.log('✓ Gerencias cargadas:', this.gerencias.length);
+      } catch (err) {
+        console.error('Error cargando gerencias:', err);
+        this.gerencias = [];
       }
     },
 
@@ -379,6 +468,27 @@ export default {
       this.abrirModal();
     },
 
+    openCreateGerencia() {
+      this.activeTab = 'gerencias';
+      this.editingId = null;
+      this.form = {
+        codigo: '',
+        nombre: '',
+        descripcion: '',
+        activo: true
+      };
+      this.abrirModal();
+    },
+
+    openEditGerencia(gerencia) {
+      this.activeTab = 'gerencias';
+      this.editingId = gerencia.id;
+      this.form = { ...gerencia };
+      // Normalizar activo a booleano
+      this.form.activo = gerencia.activo === true || gerencia.activo === 1 || gerencia.activo === '1';
+      this.abrirModal();
+    },
+
     abrirModal() {
       const modal = new window.bootstrap.Modal(document.getElementById('modalEstado'));
       modal.show();
@@ -386,10 +496,11 @@ export default {
 
     validarFormulario() {
       const errores = [];
+      const isGerencia = this.activeTab === 'gerencias';
 
-      if (!this.form.codigo || this.form.codigo.trim() === '') {
+      if (!isGerencia && (!this.form.codigo || this.form.codigo.trim() === '')) {
         errores.push('El código es requerido');
-      } else if (!/^[a-z_]+$/.test(this.form.codigo)) {
+      } else if (!isGerencia && !/^[a-z_]+$/.test(this.form.codigo)) {
         errores.push('El código debe contener solo letras minúsculas y guiones bajos');
       }
 
@@ -399,7 +510,7 @@ export default {
         errores.push('El nombre no puede exceder 100 caracteres');
       }
 
-      if (this.form.icono && this.form.icono.length > 2) {
+      if (!isGerencia && this.form.icono && this.form.icono.length > 2) {
         errores.push('El icono debe ser máximo 2 caracteres');
       }
 
@@ -419,30 +530,50 @@ export default {
 
         this.isSaving = true;
         const isEstado = this.activeTab === 'estados';
-        const endpoint = isEstado ? '/catalogos/estados-reasignados' : '/catalogos/importancias';
+        const isImportancia = this.activeTab === 'importancias';
+        const isGerencia = this.activeTab === 'gerencias';
+
+        let endpoint = '';
+        let tipo = '';
+        if (isEstado) {
+          endpoint = '/catalogos/estados-reasignados';
+          tipo = 'Estado';
+        } else if (isImportancia) {
+          endpoint = '/catalogos/importancias';
+          tipo = 'Importancia';
+        } else if (isGerencia) {
+          endpoint = '/catalogos/gerencias';
+          tipo = 'Gerencia';
+        }
 
         if (this.editingId) {
           // Actualizar
-          console.log(`Actualizando ${isEstado ? 'estado' : 'importancia'}:`, this.editingId);
-          await api.put(`${endpoint}/${this.editingId}`, {
+          console.log(`Actualizando ${tipo}:`, this.editingId);
+          const payload = {
             nombre: this.form.nombre,
             descripcion: this.form.descripcion,
-            icono: this.form.icono,
-            color: this.form.color,
             activo: this.form.activo
-          });
-          showToast(`✓ ${isEstado ? 'Estado' : 'Importancia'} actualizado correctamente`, 'success');
+          };
+          if (isEstado || isImportancia) {
+            payload.icono = this.form.icono;
+            payload.color = this.form.color;
+          }
+          await api.put(`${endpoint}/${this.editingId}`, payload);
+          showToast(`✓ ${tipo} actualizado correctamente`, 'success');
         } else {
           // Crear
-          console.log(`Creando nuevo ${isEstado ? 'estado' : 'importancia'}:`, this.form.codigo);
-          await api.post(endpoint, {
+          console.log(`Creando nuevo ${tipo}:`, this.form.codigo);
+          const payload = {
             codigo: this.form.codigo.toLowerCase(),
             nombre: this.form.nombre,
-            descripcion: this.form.descripcion,
-            icono: this.form.icono,
-            color: this.form.color
-          });
-          showToast(`✓ ${isEstado ? 'Estado' : 'Importancia'} creado correctamente`, 'success');
+            descripcion: this.form.descripcion
+          };
+          if (isEstado || isImportancia) {
+            payload.icono = this.form.icono;
+            payload.color = this.form.color;
+          }
+          await api.post(endpoint, payload);
+          showToast(`✓ ${tipo} creado correctamente`, 'success');
         }
 
         // Cerrar modal
@@ -457,8 +588,10 @@ export default {
         // Recargar
         if (isEstado) {
           await this.cargarEstados();
-        } else {
+        } else if (isImportancia) {
           await this.cargarImportancias();
+        } else if (isGerencia) {
+          await this.cargarGerencias();
         }
       } catch (err) {
         console.error('Error al guardar:', err);
@@ -557,6 +690,52 @@ export default {
         });
         showToast(`✓ Importancia "${imp.nombre}" reactivada`, 'success');
         await this.cargarImportancias();
+      } catch (err) {
+        console.error('Error:', err);
+        showToast('❌ Error: ' + (err.response?.data?.error || err.message), 'error');
+      } finally {
+        this.isSaving = false;
+      }
+    },
+
+    async desactivarGerencia(id) {
+      const gerencia = this.gerencias.find(g => g.id === id);
+      if (!gerencia) return;
+
+      if (!await confirmAction(`¿Desactivar la gerencia "${gerencia.nombre}"?`)) {
+        return;
+      }
+
+      try {
+        this.isSaving = true;
+        await api.delete(`/catalogos/gerencias/${id}`);
+        showToast(`✓ Gerencia "${gerencia.nombre}" desactivada`, 'success');
+        await this.cargarGerencias();
+      } catch (err) {
+        console.error('Error:', err);
+        showToast('❌ Error: ' + (err.response?.data?.error || err.message), 'error');
+      } finally {
+        this.isSaving = false;
+      }
+    },
+
+    async reactivarGerencia(id) {
+      const gerencia = this.gerencias.find(g => g.id === id);
+      if (!gerencia) return;
+
+      if (!await confirmAction(`¿Reactivar la gerencia "${gerencia.nombre}"?`)) {
+        return;
+      }
+
+      try {
+        this.isSaving = true;
+        await api.put(`/catalogos/gerencias/${id}`, {
+          nombre: gerencia.nombre,
+          descripcion: gerencia.descripcion,
+          activo: true
+        });
+        showToast(`✓ Gerencia "${gerencia.nombre}" reactivada`, 'success');
+        await this.cargarGerencias();
       } catch (err) {
         console.error('Error:', err);
         showToast('❌ Error: ' + (err.response?.data?.error || err.message), 'error');
