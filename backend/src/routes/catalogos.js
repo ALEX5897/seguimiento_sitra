@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// GET /api/catalogos/estados-reasignados - Obtener catálogo de estados
+// GET /api/catalogos/estados-reasignados - Obtener catálogo de estados (todos)
 router.get('/estados-reasignados', async (req, res) => {
   try {
     const [estados] = await db.query(
-      'SELECT id, codigo, nombre, descripcion, icono, color, activo FROM catalogo_estados_reasignados WHERE activo = true ORDER BY id ASC'
+      'SELECT id, codigo, nombre, descripcion, icono, color, activo FROM catalogo_estados_reasignados ORDER BY activo DESC, id ASC'
     );
     res.json(estados);
   } catch (err) {
@@ -87,11 +87,11 @@ router.delete('/estados-reasignados/:id', async (req, res) => {
 
 // ===== IMPORTANCIAS =====
 
-// GET /api/catalogos/importancias - Obtener catálogo de importancias
+// GET /api/catalogos/importancias - Obtener catálogo de importancias (todos)
 router.get('/importancias', async (req, res) => {
   try {
     const [importancias] = await db.query(
-      'SELECT id, codigo, nombre, descripcion, icono, color, activo FROM catalogo_importancias WHERE activo = true ORDER BY id ASC'
+      'SELECT id, codigo, nombre, descripcion, icono, color, activo FROM catalogo_importancias ORDER BY activo DESC, id ASC'
     );
     res.json(importancias);
   } catch (err) {
