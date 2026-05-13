@@ -165,8 +165,9 @@
                     <th>Persona</th>
                     <th>Total</th>
                     <th>Pendientes</th>
-                    <th>Resueltos</th>
+                    <th>Completos</th>
                     <th>Vencidos</th>
+                    <th>Próximos a Vencer</th>
                     <th>% Cumplimiento</th>
                   </tr>
                 </thead>
@@ -175,13 +176,14 @@
                     <td><strong>{{ usuario.persona }}</strong></td>
                     <td><span class="badge bg-primary">{{ usuario.total }}</span></td>
                     <td><span class="badge" :class="usuario.pendientes > 5 ? 'bg-danger' : 'bg-warning'">{{ usuario.pendientes }}</span></td>
-                    <td><span class="badge bg-success">{{ usuario.resueltos }}</span></td>
+                    <td><span class="badge bg-success">{{ usuario.completos }}</span></td>
                     <td><span class="badge" :class="usuario.vencidos > 0 ? 'bg-danger' : 'bg-secondary'">{{ usuario.vencidos }}</span></td>
+                    <td><span class="badge bg-info">{{ usuario.proximosVencer }}</span></td>
                     <td>
                       <div class="progress" style="height: 20px;">
-                        <div class="progress-bar" :class="usuario.total > 0 && (usuario.resueltos/usuario.total) >= 0.8 ? 'bg-success' : 'bg-warning'"
-                             :style="{width: usuario.total > 0 ? ((usuario.resueltos/usuario.total)*100) + '%' : '0%'}">
-                          {{ usuario.total > 0 ? Math.round((usuario.resueltos/usuario.total)*100) : 0 }}%
+                        <div class="progress-bar" :class="usuario.cumplimiento >= 80 ? 'bg-success' : 'bg-warning'"
+                             :style="{width: usuario.cumplimiento + '%'}">
+                          {{ usuario.cumplimiento }}%
                         </div>
                       </div>
                     </td>
@@ -331,6 +333,60 @@ export default {
         this.usuarioActual = null;
       }
     },
+    calcularCargaTrabajoPorPersona(docs, now, tomorrow, yesterday) {
+      const cargaPorPersona = {};
+
+      docs.forEach(doc => {
+        const persona = doc.reasignado_a || 'Sin asignar';
+        const estado = (doc.estado || '').toString().toLowerCase().trim();
+        const fecha = new Date(doc.fecha_max_respuesta);
+        fecha.setHours(0, 0, 0, 0);
+
+        if (!cargaPorPersona[persona]) {
+          cargaPorPersona[persona] = {
+            persona,
+            total: 0,
+            pendientes: 0,
+            completos: 0,
+            vencidos: 0,
+            proximosVencer: 0
+          };
+        }
+
+        cargaPorPersona[persona].total++;
+
+        // Contar pendientes: estado = 'pendiente' sin retraso y no próximos a vencer
+        // fecha_max_respuesta > tomorrow (después de mañana)
+        if (estado === 'pendiente' && fecha > tomorrow) {
+          cargaPorPersona[persona].pendientes++;
+        }
+
+        // Contar completos: estado = 'completo'
+        if (estado === 'completo') {
+          cargaPorPersona[persona].completos++;
+        }
+
+        // Contar vencidos: estado = 'pendiente' con más de 1 día de retraso
+        // fecha_max_respuesta < yesterday (antes de ayer)
+        if (estado === 'pendiente' && fecha < yesterday) {
+          cargaPorPersona[persona].vencidos++;
+        }
+
+        // Contar próximos a vencer: estado = 'pendiente' a 1 día de vencer
+        // fecha_max_respuesta está entre hoy y mañana (inclusive)
+        if (estado === 'pendiente' && fecha >= now && fecha <= tomorrow) {
+          cargaPorPersona[persona].proximosVencer++;
+        }
+      });
+
+      // Convertir a array y calcular % de cumplimiento
+      this.reasignadosPorUsuario = Object.values(cargaPorPersona).map(item => ({
+        ...item,
+        cumplimiento: item.total > 0 ? Math.round((item.completos / item.total) * 100) : 0
+      })).sort((a, b) => b.total - a.total);
+
+      console.log('Carga de trabajo por persona:', this.reasignadosPorUsuario);
+    },
     async loadData() {
       try {
         console.log('Loading dashboard data...');
@@ -446,7 +502,9 @@ export default {
         this.kpiReasignados = { ...kpiReas.data };
         this.kpiReasignados.tiempoPromedioRespuesta = tiempoPromedio.data?.tiempo_promedio_dias || 0;
         this.kpiReasignados.documentosResueltos = tiempoPromedio.data?.documentos_resueltos || 0;
-        this.reasignadosPorUsuario = reasxUsuario.data;
+
+        // Calcular carga de trabajo por persona
+        this.calcularCargaTrabajoPorPersona(docs, now, tomorrow, yesterday);
 
         console.log('Reasignados statistics loaded');
 
