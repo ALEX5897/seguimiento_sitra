@@ -526,29 +526,53 @@ export default {
 
       if (this.charts.reasignadosPorImportancia) this.charts.reasignadosPorImportancia.destroy();
 
-      const data = this.reasignadosPorImportancia;
-      const colors = ['#dc3545', '#fd7e14', '#ffc107', '#198754', '#6c757d'];
+      // Construir datos dinámicamente desde los documentos
+      const conteoImportancia = {};
+      (this.reasignadosPorImportancia || []).forEach(item => {
+        if (item.importancia) {
+          conteoImportancia[item.importancia] = (conteoImportancia[item.importancia] || 0) + (item.pendientes || 0);
+        }
+      });
+
+      // Si no hay datos del endpoint, usar datos vacíos pero mostrar el gráfico
+      const importancias = Object.keys(conteoImportancia).length > 0 ? Object.keys(conteoImportancia) : [];
+      const valores = Object.values(conteoImportancia);
+
       const colorMap = {
         'Urgente': '#dc3545',
         'Alta': '#fd7e14',
         'Media': '#ffc107',
+        'Normal': '#0dcaf0',
         'Baja': '#198754',
         'No especificada': '#6c757d'
       };
 
+      const backgroundColor = importancias.map(imp => colorMap[imp] || '#6c757d');
+
+      console.log('Datos gráfico importancia:', importancias, valores);
+
       this.charts.reasignadosPorImportancia = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: data.map(d => d.importancia),
+          labels: importancias,
           datasets: [{
-            data: data.map(d => d.pendientes || 0),
-            backgroundColor: data.map(d => colorMap[d.importancia] || '#6c757d')
+            data: valores,
+            backgroundColor: backgroundColor,
+            borderColor: '#fff',
+            borderWidth: 2
           }]
         },
         options: {
           responsive: true,
+          maintainAspectRatio: true,
           plugins: {
-            legend: { position: 'right' }
+            legend: {
+              position: 'right',
+              labels: {
+                padding: 20,
+                font: { size: 12 }
+              }
+            }
           }
         }
       });
