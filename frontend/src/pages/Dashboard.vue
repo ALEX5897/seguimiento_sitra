@@ -71,7 +71,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="doc in expiredByUser" :key="doc.id" class="table-danger">
+                  <tr v-for="doc in expiredByUser" :key="doc.id" class="table-danger cursor-pointer" @click="abrirModalDocumento(doc)" style="cursor: pointer;">
                     <td><strong>👤 {{ doc.reasignado_a }}</strong></td>
                     <td><code>{{ doc.numero_documento }}</code></td>
                     <td>
@@ -197,6 +197,63 @@
       </div>
     </div>
 
+    <!-- Modal de Detalle del Documento -->
+    <div class="modal fade" id="modalDetalleDocumento" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header border-bottom bg-light">
+            <h5 class="modal-title">
+              <span style="font-size: 1.5rem; margin-right: 8px;">📄</span>
+              Detalles del Documento
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body" v-if="documentoSeleccionado">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted small">Número de Documento</label>
+                <p class="fs-6"><code>{{ documentoSeleccionado.numero_documento }}</code></p>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted small">Reasignado a</label>
+                <p class="fs-6">👤 {{ documentoSeleccionado.reasignado_a }}</p>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted small">Fecha Máxima de Respuesta</label>
+                <p class="fs-6">{{ new Date(documentoSeleccionado.fecha_max_respuesta).toLocaleString() }}</p>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted small">Días Expirados</label>
+                <p class="fs-6">
+                  <span class="badge bg-danger">{{ getDiasExpirados(documentoSeleccionado.fecha_max_respuesta) }} días</span>
+                </p>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted small">Estado Actual</label>
+                <p class="fs-6"><span class="badge bg-info">{{ documentoSeleccionado.estado }}</span></p>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">Cambiar Estado</label>
+                <select v-model="documentoSeleccionado.estado" class="form-select">
+                  <option value="">-- Seleccionar estado --</option>
+                  <option v-for="estado in estados" :key="estado.id" :value="estado.nombre">
+                    {{ estado.icono ? estado.icono + ' ' : '' }}{{ estado.nombre }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-top bg-light">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary" @click="guardarCambios" :disabled="isSaving">
+              <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>
+              💾 Guardar Cambios
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -219,6 +276,9 @@ export default {
         otros: 0
       },
       estadosDistintos: [],
+      documentoSeleccionado: null,
+      estados: [],
+      isSaving: false,
       kpiReasignados: {
         total: 0,
         pendientes: 0,
@@ -247,6 +307,7 @@ export default {
   },
   mounted() {
     this.cargarUsuarioActual();
+    this.cargarEstados();
     this.loadData();
     // Auto-refresh cada 30 segundos
     this.refreshInterval = setInterval(() => {
@@ -594,6 +655,41 @@ export default {
     mostrarEstadosOtros() {
       if (this.estadosDistintos.length > 0) {
         alert(`Estados no contabilizados: ${this.estadosDistintos.join(', ')}`);
+      }
+    },
+    async cargarEstados() {
+      try {
+        const response = await api.get('/catalogos/estados-reasignados');
+        this.estados = response.data || [];
+        console.log('✓ Estados cargados:', this.estados.length);
+      } catch (error) {
+        console.error('Error cargando estados:', error);
+        this.estados = [];
+      }
+    },
+    abrirModalDocumento(documento) {
+      this.documentoSeleccionado = { ...documento };
+      const modal = new window.bootstrap.Modal(document.getElementById('modalDetalleDocumento'));
+      modal.show();
+    },
+    async guardarCambios() {
+      if (!this.documentoSeleccionado) return;
+      this.isSaving = true;
+      try {
+        await api.put(`/reasignados/${this.documentoSeleccionado.id}`, {
+          estado: this.documentoSeleccionado.estado
+        });
+        console.log('✓ Documento actualizado');
+        // Cerrar modal
+        const modal = window.bootstrap.Modal.getInstance(document.getElementById('modalDetalleDocumento'));
+        if (modal) modal.hide();
+        // Recargar datos
+        this.loadData();
+      } catch (err) {
+        console.error('Error guardando cambios:', err);
+        alert('Error al guardar: ' + (err.response?.data?.message || err.message));
+      } finally {
+        this.isSaving = false;
       }
     }
   }
