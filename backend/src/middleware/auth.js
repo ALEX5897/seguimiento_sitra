@@ -44,18 +44,25 @@ function requireAdmin(req, res, next) {
   const usuario = req.session?.usuario || req.user;
 
   if (!usuario) {
-    console.log('⚠️ No hay usuario en session ni en req.user');
-    console.log('   req.session:', req.session);
-    console.log('   req.user:', req.user);
+    console.log('\n⚠️  [requireAdmin] No hay usuario en session ni en req.user');
+    console.log('   req.session:', req.session ? { id: req.session.id, usuario: !!req.session.usuario } : 'undefined');
+    console.log('   req.user:', req.user ? { correo: req.user.correo || req.user.email, rol: req.user.rol || req.user.role } : 'undefined');
+    console.log('   Path:', req.path);
+    console.log('   Method:', req.method);
+    console.log('   Headers:', Object.keys(req.headers));
     return res.status(401).json({ error: 'No autenticado' });
   }
 
   const userRole = usuario.rol || usuario.role;
+  console.log(`\n✅ [requireAdmin] Usuario encontrado: ${usuario.nombre || usuario.name || usuario.correo || usuario.email}`);
+  console.log(`   Rol: ${userRole}`);
+
   if (userRole !== 'admin') {
-    console.log(`⚠️ Usuario no es admin. Rol: ${userRole}`);
+    console.log(`⚠️  Usuario no es admin. Rol: ${userRole}`);
     return res.status(403).json({ error: 'Requiere permisos de administrador' });
   }
 
+  console.log('   ✅ Acceso permitido');
   req.usuarioAuth = usuario;
   next();
 }
