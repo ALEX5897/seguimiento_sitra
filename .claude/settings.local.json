@@ -67,7 +67,12 @@
       "Bash(xargs grep -l \"notificaciones\\\\|plantilla\" -i)",
       "Bash(node apply_migration.js)",
       "Bash(node setup_templates.js)",
-      "Bash(node fix_enum.js)"
+      "Bash(node fix_enum.js)",
+      "Bash(node test_notifications.js)",
+      "Bash(node test_send_notifications.js)",
+      "Bash(node test_send_now.js)",
+      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); const mysql = require\\('mysql2/promise'\\); \\(async \\(\\) => { try { const conn = await mysql.createConnection\\({host: process.env.DB_HOST, user: process.env.DB_USER, password: process.env.DB_PASS, database: process.env.DB_NAME}\\); const [result] = await conn.query\\(\\\\\"SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'notificaciones_log' AND COLUMN_NAME = 'tipo' AND TABLE_SCHEMA = ?\\\\\",[process.env.DB_NAME]\\); console.log\\('ENUM values:', result[0].COLUMN_TYPE\\); await conn.end\\(\\); } catch\\(e\\) { console.error\\('Error:', e.message\\); } }\\)\\(\\);\")",
+      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); const mysql = require\\('mysql2/promise'\\); \\(async \\(\\) => { try { const conn = await mysql.createConnection\\({host: process.env.DB_HOST, user: process.env.DB_USER, password: process.env.DB_PASS, database: process.env.DB_NAME}\\); console.log\\('=== Usuarios en la BD ==='\\); const [usuarios] = await conn.query\\('SELECT id, nombre, correo FROM usuarios ORDER BY id'\\); console.log\\(\\\\`Total usuarios: \\\\${usuarios.length}\\\\`\\); usuarios.forEach\\(u => console.log\\(\\\\`  ID \\\\${String\\(u.id\\).padEnd\\(5\\)} \\\\${\\(u.nombre || '?'\\).padEnd\\(30\\)} \\(\\\\${u.correo || '?'}\\)\\\\`\\)\\); console.log\\('\\\\\\\\n=== Reasignados que serían notificados ==='\\); const [reas] = await conn.query\\('SELECT DISTINCT usuario_id, reasignado_a FROM reasignados WHERE usuario_id IS NOT NULL AND estado NOT IN \\(\\\\\"archivado\\\\\", \\\\\"eliminado\\\\\", \\\\\"enviado\\\\\", \\\\\"cancelado\\\\\", \\\\\"resuelto\\\\\", \\\\\"completado\\\\\"\\) ORDER BY usuario_id'\\); console.log\\(\\\\`Total usuario_ids únicos: \\\\${reas.length}\\\\`\\); reas.forEach\\(r => console.log\\(\\\\`  usuario_id=\\\\${String\\(r.usuario_id\\).padEnd\\(5\\)} reasignado_a=\\\\${r.reasignado_a || 'NULL'}\\\\`\\)\\); await conn.end\\(\\); } catch\\(e\\) { console.error\\('Error:', e.message\\); } }\\)\\(\\);\")"
     ]
   }
 }

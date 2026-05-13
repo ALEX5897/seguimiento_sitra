@@ -545,30 +545,30 @@ async function ejecutarNotificacionesManual(filtros) {
     if (filtros.documentosExpirados) {
       console.log('📋 Procesando documentos expirados...');
       const resultado = await procesarNotificacionesExpirados();
-      correos_enviados += resultado.correos || 0;
-      notificaciones_creadas += resultado.notificaciones || 0;
+      correos_enviados += resultado.enviados || 0;
     }
 
     // Procesar documentos próximos a expirar si está seleccionado
     if (filtros.documentosProximos) {
       console.log('⏰ Procesando documentos próximos a expirar...');
       const resultado = await procesarNotificacionesUnDiaAntes();
-      correos_enviados += resultado.correos || 0;
-      notificaciones_creadas += resultado.notificaciones || 0;
+      correos_enviados += resultado.enviados || 0;
     }
 
     // Registrar en log
-    await pool.query(
-      `INSERT INTO notificaciones_log (tipo, cantidad_enviados, cantidad_notificaciones, fecha_envio, estado)
-       VALUES (?, ?, ?, NOW(), 'completado')`,
-      ['notificaciones_manuales', correos_enviados, notificaciones_creadas]
-    ).catch(err => console.error('Error registrando en log:', err));
+    if (correos_enviados > 0) {
+      await pool.query(
+        `INSERT INTO notificaciones_log (tipo, cantidad_correos, fecha_envio, estado)
+         VALUES (?, ?, NOW(), 'enviado')`,
+        ['notificaciones_generales', correos_enviados]
+      ).catch(err => console.error('Error registrando en log:', err));
+    }
 
-    console.log(`✅ Notificaciones enviadas: ${correos_enviados} correos, ${notificaciones_creadas} notificaciones`);
+    console.log(`✅ Notificaciones enviadas: ${correos_enviados} correos`);
 
     return {
       correos_enviados,
-      notificaciones_creadas,
+      notificaciones_creadas: 0,
       mensaje: `Se envió exitosamente a ${correos_enviados} usuarios`
     };
   } catch (error) {
