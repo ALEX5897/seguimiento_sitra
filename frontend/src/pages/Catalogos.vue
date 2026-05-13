@@ -240,11 +240,16 @@
                 </select>
               </div>
               <div v-if="editingId" class="mb-3">
-                <label class="form-label fw-bold">Activo</label>
+                <label class="form-label fw-bold">Estado</label>
                 <div class="form-check form-switch">
-                  <input v-model="form.activo" type="checkbox" class="form-check-input" id="activoCheck" />
+                  <input
+                    :checked="form.activo === true || form.activo === 1 || form.activo === '1'"
+                    @change="form.activo = !form.activo"
+                    type="checkbox"
+                    class="form-check-input"
+                    id="activoCheck" />
                   <label class="form-check-label" for="activoCheck">
-                    {{ form.activo ? 'Activo' : 'Inactivo' }}
+                    {{ (form.activo === true || form.activo === 1 || form.activo === '1') ? '✓ Activo' : '✗ Inactivo' }}
                   </label>
                 </div>
               </div>
@@ -346,6 +351,8 @@ export default {
       this.activeTab = 'estados';
       this.editingId = estado.id;
       this.form = { ...estado };
+      // Normalizar activo a booleano
+      this.form.activo = estado.activo === true || estado.activo === 1 || estado.activo === '1';
       this.abrirModal();
     },
 
@@ -367,6 +374,8 @@ export default {
       this.activeTab = 'importancias';
       this.editingId = imp.id;
       this.form = { ...imp };
+      // Normalizar activo a booleano
+      this.form.activo = imp.activo === true || imp.activo === 1 || imp.activo === '1';
       this.abrirModal();
     },
 
