@@ -69,29 +69,24 @@ function requireAdmin(req, res, next) {
 
 /**
  * Determina si el usuario puede ver todos los documentos
- * o solo los suyos
+ * o solo los suyos. Solo admin y secretaria pueden ver todo.
  */
 function canViewAll(usuario) {
-  const rolLower = (usuario.rol || '').toLowerCase();
-  return usuario.rol === 'admin' || 
-         usuario.rol === 'secretaria' || 
-         rolLower === 'solo_vista' || 
-         rolLower === 'solo lectura' || 
-         rolLower === 'lectura';
+  return usuario.rol === 'admin' || usuario.rol === 'secretaria';
 }
 
 /**
- * Obtiene el ID del usuario en la tabla 'usuarios' basándose en el correo
+ * Obtiene el ID del usuario en la tabla 'empleados' basándose en el correo
  * del usuario autenticado en 'usuarios_auth'
- * 
+ *
  * @param {object} db - Conexión a la base de datos
  * @param {string} correo - Correo del usuario autenticado
- * @returns {Promise<number|null>} - ID del usuario en la tabla usuarios, o null si no existe
+ * @returns {Promise<number|null>} - ID del usuario en la tabla empleados, o null si no existe
  */
 async function getUserIdFromCorreo(db, correo) {
   try {
     const [rows] = await db.query(
-      'SELECT id FROM usuarios WHERE correo = ?',
+      'SELECT id FROM empleados WHERE correo = ?',
       [correo]
     );
     return rows.length > 0 ? rows[0].id : null;

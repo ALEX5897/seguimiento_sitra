@@ -8,14 +8,14 @@ router.get('/tareas-por-area', requireAuth, async (req, res) => {
   try {
     const usuario = req.usuarioAuth;
     let query = `
-      SELECT 
+      SELECT
         COALESCE(u.gerencia, 'Sin asignar') as area,
         COUNT(*) as total,
         SUM(CASE WHEN t.estado = 'completado' OR t.avance = '100%' THEN 1 ELSE 0 END) as completadas,
         SUM(CASE WHEN t.estado = 'en_proceso' THEN 1 ELSE 0 END) as en_proceso,
         SUM(CASE WHEN t.estado = 'pendiente' THEN 1 ELSE 0 END) as pendientes
       FROM tareas t
-      LEFT JOIN usuarios u ON t.usuario_id = u.id
+      LEFT JOIN empleados u ON t.usuario_id = u.id
     `;
     
     const params = [];
@@ -46,12 +46,12 @@ router.get('/documentos-expirados-por-area', requireAuth, async (req, res) => {
   try {
     const usuario = req.usuarioAuth;
     let query = `
-      SELECT 
+      SELECT
         COALESCE(u.gerencia, 'Sin asignar') as area,
         COUNT(*) as total,
         SUM(CASE WHEN r.fecha_max_respuesta < NOW() AND r.estado NOT IN ('archivado', 'eliminado', 'enviado', 'completado') THEN 1 ELSE 0 END) as expirados
       FROM reasignados r
-      LEFT JOIN usuarios u ON r.usuario_id = u.id
+      LEFT JOIN empleados u ON r.usuario_id = u.id
       WHERE r.estado NOT IN ('archivado', 'eliminado', 'enviado', 'completado')
     `;
     

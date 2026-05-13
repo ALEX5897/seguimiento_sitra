@@ -303,23 +303,34 @@ router.post('/admin-login', async (req, res) => {
 // POST /api/auth/logout - Logout
 router.post('/logout', (req, res) => {
   const isKeycloak = isKeycloakEnabled();
-  
+
+  console.log('🚪 Logout request - Keycloak habilitado:', isKeycloak);
+
   req.session.destroy((err) => {
     if (err) {
+      console.error('❌ Error al destruir sesión:', err);
       return res.status(500).json({ error: 'Error al cerrar sesión' });
     }
-    
+
+    console.log('✅ Sesión destruida exitosamente');
+
+    // Limpiar cookies
+    res.clearCookie('connect.sid');
+    res.clearCookie('sessionid');
+
     if (isKeycloak) {
       // Si usa Keycloak, devolver URL de logout
       const logoutUrl = getLogoutUrl(process.env.FRONTEND_URL || 'http://localhost:5173');
-      return res.json({ 
-        success: true, 
+      console.log('🔐 Retornando URL de logout de Keycloak:', logoutUrl);
+      return res.json({
+        success: true,
         mensaje: 'Sesión cerrada',
         keycloakLogout: true,
-        logoutUrl 
+        logoutUrl
       });
     }
-    
+
+    console.log('✅ Logout local completado');
     res.json({ success: true, mensaje: 'Sesión cerrada' });
   });
 });
