@@ -170,4 +170,89 @@ router.delete('/importancias/:id', async (req, res) => {
   }
 });
 
+// ===== GERENCIAS =====
+
+// GET /api/catalogos/gerencias - Obtener catálogo de gerencias (todos)
+router.get('/gerencias', async (req, res) => {
+  try {
+    const [gerencias] = await db.query(
+      'SELECT id, codigo, nombre, descripcion, activo FROM catalogo_gerencias ORDER BY activo DESC, nombre ASC'
+    );
+    res.json(gerencias);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/catalogos/gerencias/:codigo - Obtener gerencia por código
+router.get('/gerencias/:codigo', async (req, res) => {
+  try {
+    const [gerencia] = await db.query(
+      'SELECT * FROM catalogo_gerencias WHERE codigo = ? AND activo = true LIMIT 1',
+      [req.params.codigo]
+    );
+
+    if (!gerencia.length) {
+      return res.status(404).json({ error: 'Gerencia no encontrada' });
+    }
+
+    res.json(gerencia[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/catalogos/gerencias - Crear nueva gerencia (admin)
+router.post('/gerencias', async (req, res) => {
+  try {
+    const { codigo, nombre, descripcion } = req.body;
+
+    if (!codigo || !nombre) {
+      return res.status(400).json({ error: 'Código y nombre son requeridos' });
+    }
+
+    const [result] = await db.query(
+      'INSERT INTO catalogo_gerencias (codigo, nombre, descripcion) VALUES (?, ?, ?)',
+      [codigo, nombre, descripcion || null]
+    );
+
+    res.json({ id: result.insertId, codigo, nombre });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'El código de gerencia ya existe' });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/catalogos/gerencias/:id - Actualizar gerencia
+router.put('/gerencias/:id', async (req, res) => {
+  try {
+    const { nombre, descripcion, activo } = req.body;
+
+    await db.query(
+      'UPDATE catalogo_gerencias SET nombre = ?, descripcion = ?, activo = ? WHERE id = ?',
+      [nombre || null, descripcion || null, activo !== undefined ? activo : true, req.params.id]
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/catalogos/gerencias/:id - Desactivar gerencia (soft delete)
+router.delete('/gerencias/:id', async (req, res) => {
+  try {
+    await db.query(
+      'UPDATE catalogo_gerencias SET activo = false WHERE id = ?',
+      [req.params.id]
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
