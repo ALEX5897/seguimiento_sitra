@@ -52,7 +52,22 @@
       "Bash(pkill -f \"vite\")",
       "Bash(netstat -tulpn)",
       "Bash(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
-      "PowerShell(netstat *)"
+      "PowerShell(netstat *)",
+      "Bash(node blanquear_y_cargar_pruebas.js)",
+      "Bash(powershell -Command ' *)",
+      "Bash(node normalizar_registros.js)",
+      "Bash(node completar_catalogos.js)",
+      "Bash(node procesar_gerencias.js)",
+      "Bash(node analizar_excel.js)",
+      "Bash(node verificar_gerencias.js)",
+      "Bash(node check_tables.js)",
+      "Bash(node check_empleados.js)",
+      "Bash(node sincronizar_gerencias.js)",
+      "Bash(node sincronizar_gerencias_mejorado.js)",
+      "Bash(xargs grep -l \"notificaciones\\\\|plantilla\" -i)",
+      "Bash(node apply_migration.js)",
+      "Bash(node setup_templates.js)",
+      "Bash(node fix_enum.js)"
     ]
   }
 }

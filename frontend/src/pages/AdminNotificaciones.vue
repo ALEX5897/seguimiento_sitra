@@ -217,6 +217,44 @@
         </div>
       </div>
 
+      <!-- Plantillas de Notificación -->
+      <div class="col-md-12 mb-4">
+        <div class="card">
+          <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><i class="bi bi-file-text"></i> Plantillas de Notificación por Correo</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div v-for="plantilla in plantillas" :key="plantilla.tipo" class="col-md-6 mb-3">
+                <div class="card border-light">
+                  <div class="card-header" :style="{ backgroundColor: getColorPantilla(plantilla.tipo) }">
+                    <h6 class="mb-0 text-white">
+                      <i :class="getIconoPantilla(plantilla.tipo)"></i> {{ getNombrePantilla(plantilla.tipo) }}
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <small class="text-muted d-block mb-2"><strong>Asunto:</strong></small>
+                    <p class="small mb-3">{{ plantilla.asunto }}</p>
+                    <button
+                      class="btn btn-sm btn-outline-primary me-2"
+                      @click="editarPlantilla(plantilla)"
+                    >
+                      <i class="bi bi-pencil"></i> Editar
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-info"
+                      @click="previewPlantilla(plantilla)"
+                    >
+                      <i class="bi bi-eye"></i> Vista Previa
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Enviar Notificaciones Ahora -->
       <div class="col-md-6 mb-4">
         <div class="card">
@@ -272,6 +310,82 @@
       </div>
     </div>
 
+    <!-- Modal para editar plantilla -->
+    <div v-if="mostrarModalPlantilla" class="modal d-block" style="background-color: rgba(0,0,0,0.5);">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Editar Plantilla - {{ getNombrePantilla(plantillaActual.tipo) }}</h5>
+            <button type="button" class="btn-close" @click="mostrarModalPlantilla = false"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label"><strong>Asunto del Correo</strong></label>
+              <input
+                v-model="plantillaActual.asunto"
+                type="text"
+                class="form-control"
+              />
+              <small class="text-muted">Puedes usar {{variable}} para reemplazar con datos dinámicos</small>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"><strong>Cuerpo del Correo (HTML)</strong></label>
+              <textarea
+                v-model="plantillaActual.cuerpo_html"
+                class="form-control"
+                rows="12"
+                style="font-family: monospace;"
+              ></textarea>
+              <small class="text-muted d-block mt-2">
+                <strong>Variables disponibles:</strong> {{nombre}}, {{cantidad}}, {{numero_documento}}, {{tipo_documento}}, {{remitente}}, {{fecha_max_respuesta}}, {{asunto}}, {{url_sistema}}, {{tabla_documentos}}
+              </small>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="mostrarModalPlantilla = false">
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              @click="guardarPlantilla"
+              :disabled="guardandoPlantilla"
+            >
+              <span v-if="guardandoPlantilla" class="spinner-border spinner-border-sm me-2"></span>
+              Guardar Cambios
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal para preview de plantilla -->
+    <div v-if="mostrarPreview" class="modal d-block" style="background-color: rgba(0,0,0,0.5);">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Vista Previa - {{ getNombrePantilla(plantillaActual.tipo) }}</h5>
+            <button type="button" class="btn-close" @click="mostrarPreview = false"></button>
+          </div>
+          <div class="modal-body">
+            <div class="card">
+              <div class="card-body">
+                <p><strong>Asunto:</strong> {{ plantillaActual.asunto }}</p>
+                <hr>
+                <div v-html="plantillaActual.cuerpo_html" class="border p-3" style="background-color: #f9f9f9;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="mostrarPreview = false">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Alertas -->
     <div v-if="mensaje" class="alert" :class="'alert-' + tipoMensaje" role="alert">
       {{ mensaje }}
@@ -308,12 +422,18 @@ export default {
         documentosExpirados: true,
         documentosProximos: true
       },
-      enviandoAhora: false
+      enviandoAhora: false,
+      plantillas: [],
+      mostrarModalPlantilla: false,
+      mostrarPreview: false,
+      plantillaActual: {},
+      guardandoPlantilla: false
     };
   },
   mounted() {
     this.cargarConfiguracion();
     this.cargarStatus();
+    this.cargarPlantillas();
   },
   methods: {
     async cargarConfiguracion() {
@@ -486,6 +606,95 @@ export default {
       } finally {
         this.enviandoAhora = false;
       }
+    },
+
+    async cargarPlantillas() {
+      try {
+        const response = await fetch('/api/admin/notificaciones/plantillas', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        this.plantillas = data;
+      } catch (error) {
+        console.error('Error cargando plantillas:', error);
+        this.mostrarError('Error al cargar plantillas: ' + error.message);
+      }
+    },
+
+    editarPlantilla(plantilla) {
+      this.plantillaActual = JSON.parse(JSON.stringify(plantilla));
+      this.mostrarModalPlantilla = true;
+    },
+
+    previewPlantilla(plantilla) {
+      this.plantillaActual = JSON.parse(JSON.stringify(plantilla));
+      this.mostrarPreview = true;
+    },
+
+    async guardarPlantilla() {
+      try {
+        this.guardandoPlantilla = true;
+        const response = await fetch(`/api/admin/notificaciones/plantillas/${this.plantillaActual.tipo}`, {
+          method: 'PUT',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            asunto: this.plantillaActual.asunto,
+            cuerpo_html: this.plantillaActual.cuerpo_html
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        this.mostrarExito('Plantilla guardada correctamente');
+        this.mostrarModalPlantilla = false;
+        await this.cargarPlantillas();
+      } catch (error) {
+        console.error('Error guardando plantilla:', error);
+        this.mostrarError('Error al guardar plantilla: ' + error.message);
+      } finally {
+        this.guardandoPlantilla = false;
+      }
+    },
+
+    getNombrePantilla(tipo) {
+      const nombres = {
+        'asignado': '📎 Documentos Asignados',
+        'tarde': '❌ Documentos Tarde (Vencidos)',
+        'proximo_vencer': '⏰ Documentos Próximos a Vencer'
+      };
+      return nombres[tipo] || tipo;
+    },
+
+    getColorPantilla(tipo) {
+      const colores = {
+        'asignado': '#007bff',
+        'tarde': '#dc3545',
+        'proximo_vencer': '#ff9800'
+      };
+      return colores[tipo] || '#6c757d';
+    },
+
+    getIconoPantilla(tipo) {
+      const iconos = {
+        'asignado': 'bi bi-file-earmark-plus',
+        'tarde': 'bi bi-exclamation-triangle',
+        'proximo_vencer': 'bi bi-clock-history'
+      };
+      return iconos[tipo] || 'bi bi-file-text';
     }
   }
 };

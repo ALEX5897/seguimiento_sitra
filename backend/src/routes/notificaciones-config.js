@@ -149,6 +149,59 @@ router.post('/test-email', requireAdmin, async (req, res) => {
   }
 });
 
+// GET - Obtener plantillas de notificación (solo admin)
+router.get('/plantillas', requireAdmin, async (req, res) => {
+  try {
+    const [plantillas] = await db.query(
+      'SELECT id, tipo, asunto, cuerpo_html FROM notificaciones_plantillas ORDER BY tipo'
+    );
+    res.json(plantillas);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET - Obtener plantilla específica (solo admin)
+router.get('/plantillas/:tipo', requireAdmin, async (req, res) => {
+  try {
+    const [plantilla] = await db.query(
+      'SELECT id, tipo, asunto, cuerpo_html FROM notificaciones_plantillas WHERE tipo = ?',
+      [req.params.tipo]
+    );
+    if (!plantilla.length) {
+      return res.status(404).json({ error: 'Plantilla no encontrada' });
+    }
+    res.json(plantilla[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT - Actualizar plantilla (solo admin)
+router.put('/plantillas/:tipo', requireAdmin, async (req, res) => {
+  try {
+    const { asunto, cuerpo_html } = req.body;
+
+    if (!asunto || !cuerpo_html) {
+      return res.status(400).json({ error: 'Asunto y cuerpo HTML son requeridos' });
+    }
+
+    await db.query(
+      'UPDATE notificaciones_plantillas SET asunto = ?, cuerpo_html = ?, updated_at = NOW() WHERE tipo = ?',
+      [asunto, cuerpo_html, req.params.tipo]
+    );
+
+    const [plantilla] = await db.query(
+      'SELECT id, tipo, asunto, cuerpo_html FROM notificaciones_plantillas WHERE tipo = ?',
+      [req.params.tipo]
+    );
+
+    res.json({ success: true, plantilla: plantilla[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST - Enviar notificaciones ahora (solo admin)
 router.post('/enviar-ahora', requireAdmin, async (req, res) => {
   try {
