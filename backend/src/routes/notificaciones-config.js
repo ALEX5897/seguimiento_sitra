@@ -202,6 +202,61 @@ router.put('/plantillas/:tipo', requireAdmin, async (req, res) => {
   }
 });
 
+// GET - Obtener configuración de SMTP avanzada (solo admin)
+router.get('/smtp-config', requireAdmin, async (req, res) => {
+  try {
+    const [config] = await db.query('SELECT * FROM notificaciones_smtp_config WHERE id = 1');
+    if (!config.length) {
+      return res.status(404).json({ error: 'Configuración no encontrada' });
+    }
+    res.json(config[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT - Actualizar configuración de SMTP avanzada (solo admin)
+router.put('/smtp-config', requireAdmin, async (req, res) => {
+  try {
+    const {
+      email_from,
+      email_from_name,
+      email_reply_to,
+      email_cc,
+      email_bcc,
+      smtp_host,
+      smtp_port,
+      smtp_user,
+      smtp_password
+    } = req.body;
+
+    const updates = {};
+    if (email_from) updates.email_from = email_from;
+    if (email_from_name) updates.email_from_name = email_from_name;
+    if (email_reply_to !== undefined) updates.email_reply_to = email_reply_to;
+    if (email_cc !== undefined) updates.email_cc = email_cc;
+    if (email_bcc !== undefined) updates.email_bcc = email_bcc;
+    if (smtp_host) updates.smtp_host = smtp_host;
+    if (smtp_port) updates.smtp_port = parseInt(smtp_port);
+    if (smtp_user) updates.smtp_user = smtp_user;
+    if (smtp_password) updates.smtp_password = smtp_password;
+
+    const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+    const values = Object.values(updates);
+    values.push(1);
+
+    await db.query(
+      `UPDATE notificaciones_smtp_config SET ${setClause}, updated_at = NOW() WHERE id = ?`,
+      values
+    );
+
+    const [config] = await db.query('SELECT * FROM notificaciones_smtp_config WHERE id = 1');
+    res.json({ success: true, config: config[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST - Enviar notificaciones ahora (solo admin)
 router.post('/enviar-ahora', requireAdmin, async (req, res) => {
   try {

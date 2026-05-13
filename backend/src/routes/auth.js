@@ -168,10 +168,20 @@ router.post('/login', async (req, res) => {
       permisos
     };
 
-    res.json({
-      success: true,
-      usuario: req.session.usuario,
-      mensaje: 'Login exitoso'
+    // Guardar sesión en el store
+    req.session.save((err) => {
+      if (err) {
+        console.error('⚠️ Error guardando sesión:', err);
+        return res.status(500).json({ error: 'Error al guardar sesión' });
+      }
+
+      console.log('✅ Sesión guardada para usuario:', usuario.correo, 'Session ID:', req.sessionID);
+
+      res.json({
+        success: true,
+        usuario: req.session.usuario,
+        mensaje: 'Login exitoso'
+      });
     });
   } catch (error) {
     console.error('Error en login:', error);
@@ -269,10 +279,20 @@ router.post('/admin-login', async (req, res) => {
       permisos
     };
 
-    res.json({
-      success: true,
-      usuario: req.session.usuario,
-      mensaje: 'Admin login exitoso'
+    // Guardar sesión en el store
+    req.session.save((err) => {
+      if (err) {
+        console.error('⚠️ Error guardando sesión:', err);
+        return res.status(500).json({ error: 'Error al guardar sesión' });
+      }
+
+      console.log('✅ Sesión de admin guardada para usuario:', usuarioData.correo, 'Session ID:', req.sessionID);
+
+      res.json({
+        success: true,
+        usuario: req.session.usuario,
+        mensaje: 'Admin login exitoso'
+      });
     });
   } catch (error) {
     console.error('❌ Error en admin login:', error);

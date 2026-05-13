@@ -1,20 +1,78 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-const smtpHost = process.env.SMTP_HOST || process.env.MAIL_HOST;
-const smtpPort = process.env.SMTP_PORT || process.env.MAIL_PORT || 587;
-const smtpSecure = (process.env.SMTP_SECURE || process.env.MAIL_SECURE) === 'true';
-const smtpRequireTls = (process.env.SMTP_REQUIRE_TLS || process.env.MAIL_REQUIRE_TLS) === 'true';
-const smtpUser = process.env.SMTP_USER || process.env.MAIL_USER;
-const smtpPassword = process.env.SMTP_PASSWORD || process.env.MAIL_PASS;
-const smtpRejectUnauthorized = (process.env.SMTP_REJECT_UNAUTHORIZED || process.env.MAIL_REJECT_UNAUTHORIZED) === 'true';
-const emailFrom = process.env.EMAIL_FROM || smtpUser;
+// Variables globales para configuración
+let smtpConfig = null;
+let transporter = null;
+
 // NOTA: Para usar correo de prueba, define NOTIFICATION_TEST_EMAIL o MAIL_TO_PRUEBA en .env
 const notificationTestEmail = process.env.NOTIFICATION_TEST_EMAIL || process.env.MAIL_TO_PRUEBA || '';
 
-console.log("SMTP_HOST:", smtpHost);
-console.log("SMTP_USER:", smtpUser);
 console.log("TEST_EMAIL:", notificationTestEmail || 'No configurado - usando correos reales');
+
+/**
+ * Obtener configuración de SMTP desde BD o .env
+ */
+async function obtenerConfiguracionSMTP() {
+  try {
+    const db = require('../db');
+    const [config] = await db.query('SELECT * FROM notificaciones_smtp_config WHERE id = 1');
+
+    if (config.length > 0) {
+      console.log("✅ Configuración SMTP cargada desde BD");
+      return config[0];
+    }
+  } catch (error) {
+    console.warn('⚠️  No se pudo cargar configuración de BD, usando .env');
+  }
+
+  // Fallback a .env si no existe en BD
+  return {
+    smtp_host: process.env.SMTP_HOST || process.env.MAIL_HOST,
+    smtp_port: parseInt(process.env.SMTP_PORT || process.env.MAIL_PORT || 587),
+    smtp_secure: (process.env.SMTP_SECURE || process.env.MAIL_SECURE) === 'true',
+    smtp_require_tls: (process.env.SMTP_REQUIRE_TLS || process.env.MAIL_REQUIRE_TLS) === 'true',
+    smtp_user: process.env.SMTP_USER || process.env.MAIL_USER,
+    smtp_password: process.env.SMTP_PASSWORD || process.env.MAIL_PASS,
+    email_from: process.env.EMAIL_FROM || process.env.SMTP_USER || process.env.MAIL_USER,
+    email_from_name: process.env.EMAIL_FROM_NAME || 'SITRA - Sistema de Seguimiento',
+    email_reply_to: process.env.EMAIL_REPLY_TO || null,
+    email_cc: process.env.EMAIL_CC || null,
+    email_bcc: process.env.EMAIL_BCC || null
+  };
+}
+
+/**
+ * Crear transporter con configuración actual
+ */
+async function crearTransporter() {
+  const config = await obtenerConfiguracionSMTP();
+
+  console.log("SMTP_HOST:", config.smtp_host);
+  console.log("SMTP_USER:", config.smtp_user);
+  console.log("FROM:", config.email_from);
+
+  const transporterConfig = {
+    host: config.smtp_host,
+    port: config.smtp_port,
+    secure: config.smtp_secure,
+    requireTLS: config.smtp_require_tls,
+    auth: {
+      user: config.smtp_user,
+      pass: config.smtp_password
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  };
+
+  smtpConfig = config;
+  transporter = nodemailer.createTransport(transporterConfig);
+  return transporter;
+}
+
+// Inicializar transporter al cargar el módulo
+crearTransporter().catch(err => console.error('Error inicializando transporter:', err));
 
 function reemplazarVariables(texto, datos) {
   if (!texto) return texto;
@@ -36,21 +94,6 @@ function reemplazarVariables(texto, datos) {
 
   return resultado;
 }
-
-// Configuración de transporte para Outlook Office365
-const transporter = nodemailer.createTransport({
-  host: smtpHost,
-  port: smtpPort,
-  secure: smtpSecure,
-  requireTLS: smtpRequireTls,
-  auth: {
-    user: smtpUser,
-    pass: smtpPassword
-  },
-  tls: {
-    rejectUnauthorized: smtpRejectUnauthorized
-  }
-});
 
 /**
  * Enviar correo de documentos expirados/próximos a expirar
@@ -205,12 +248,30 @@ async function enviarNotificacionDocumentos(usuario, documentos, tipo = 'expirad
       asunto = titulo;
     }
 
-    const info = await transporter.sendMail({
-      from: `"SISTRA - Sistema de Gestión" <${emailFrom}>`,
+    // Preparar opciones de envío
+    const mailOptions = {
+      from: `"${smtpConfig.email_from_name}" <${smtpConfig.email_from}>`,
       to: destinatarioOverride || correoUsuario,
       subject: asunto,
       html: html
-    });
+    };
+
+    // Agregar CC si está configurado
+    if (smtpConfig.email_cc) {
+      mailOptions.cc = smtpConfig.email_cc;
+    }
+
+    // Agregar BCC si está configurado
+    if (smtpConfig.email_bcc) {
+      mailOptions.bcc = smtpConfig.email_bcc;
+    }
+
+    // Agregar Reply-To si está configurado
+    if (smtpConfig.email_reply_to) {
+      mailOptions.replyTo = smtpConfig.email_reply_to;
+    }
+
+    const info = await transporter.sendMail(mailOptions);
 
     console.log(`✅ Correo enviado a ${destinatarioOverride || correoUsuario} - Message ID: ${info.messageId}`);
     return true;
@@ -226,12 +287,17 @@ async function enviarNotificacionDocumentos(usuario, documentos, tipo = 'expirad
 async function enviarCorreo(destinatario, asunto, html, options = {}) {
   try {
     const mailOptions = {
-      from: `"SISTRA - Sistema de Gestión" <${emailFrom}>`,
+      from: `"${smtpConfig.email_from_name}" <${smtpConfig.email_from}>`,
       to: destinatario,
       subject: asunto,
       html,
       ...options
     };
+
+    // Agregar CC/BCC/Reply-To si están configurados
+    if (smtpConfig.email_cc) mailOptions.cc = smtpConfig.email_cc;
+    if (smtpConfig.email_bcc) mailOptions.bcc = smtpConfig.email_bcc;
+    if (smtpConfig.email_reply_to) mailOptions.replyTo = smtpConfig.email_reply_to;
 
     const info = await transporter.sendMail(mailOptions);
     console.log(`✅ Correo enviado a ${destinatario} - Message ID: ${info.messageId}`);
