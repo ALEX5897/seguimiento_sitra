@@ -265,33 +265,44 @@ export default {
         const reasRes = await api.get('/reasignados');
         console.log('Reasignados:', reasRes.data);
         const docs = reasRes.data || [];
+
+        // Establecer fechas de referencia
         const now = new Date();
+        now.setHours(0, 0, 0, 0);
         const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
         // Contar todos los reasignados
         this.counts.reasignados = docs.length;
 
-        // Contar pendientes: estado = 'pendiente'
+        // Contar pendientes: estado = 'pendiente' sin retraso y no próximos a vencer
+        // fecha_max_respuesta > tomorrow (después de mañana)
         this.counts.pendientes = docs.filter(r => {
+          if (!r.fecha_max_respuesta) return false;
           const estado = (r.estado || '').toString().toLowerCase().trim();
-          return estado === 'pendiente';
+          const fechaMax = new Date(r.fecha_max_respuesta);
+          fechaMax.setHours(0, 0, 0, 0);
+          return estado === 'pendiente' && fechaMax > tomorrow;
         }).length;
 
-        // Contar vencidos: estado = 'pendiente' Y fecha_max_respuesta < hoy
+        // Contar vencidos: estado = 'pendiente' con más de 1 día de retraso
+        // fecha_max_respuesta < yesterday (antes de ayer)
         this.counts.vencidos = docs.filter(r => {
           if (!r.fecha_max_respuesta) return false;
           const estado = (r.estado || '').toString().toLowerCase().trim();
-          const isExpired = new Date(r.fecha_max_respuesta) < now;
-          return estado === 'pendiente' && isExpired;
+          const fechaMax = new Date(r.fecha_max_respuesta);
+          fechaMax.setHours(0, 0, 0, 0);
+          return estado === 'pendiente' && fechaMax < yesterday;
         }).length;
 
-        // Contar próximos a vencer: estado = 'pendiente' Y fecha_max_respuesta está a 1 día
+        // Contar próximos a vencer: estado = 'pendiente' a 1 día de vencer
+        // fecha_max_respuesta está entre hoy y mañana (inclusive)
         this.counts.proximosVencer = docs.filter(r => {
           if (!r.fecha_max_respuesta) return false;
           const estado = (r.estado || '').toString().toLowerCase().trim();
           const fechaMax = new Date(r.fecha_max_respuesta);
-          const isInRange = fechaMax > now && fechaMax <= tomorrow;
-          return estado === 'pendiente' && isInRange;
+          fechaMax.setHours(0, 0, 0, 0);
+          return estado === 'pendiente' && fechaMax >= now && fechaMax <= tomorrow;
         }).length;
 
         // Contar completos: estado = 'completo'
