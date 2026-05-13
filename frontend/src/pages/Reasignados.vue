@@ -458,9 +458,14 @@ export default {
               return isExpired && !isExcluded
             case 'proximosvencer':
               if (!item.fecha_max_respuesta) return false
-              const timeLeft = new Date(item.fecha_max_respuesta) - now
-              const hoursLeft = timeLeft / (1000 * 60 * 60)
-              return hoursLeft > 0 && hoursLeft <= 24 && !isExcluded
+              // Solo documentos en estado pendiente a 1 día de vencer
+              if (estado !== 'pendiente') return false
+              const nowDate = new Date()
+              nowDate.setHours(0, 0, 0, 0)
+              const tomorrow = new Date(nowDate.getTime() + 24 * 60 * 60 * 1000)
+              const fechaMax = new Date(item.fecha_max_respuesta)
+              fechaMax.setHours(0, 0, 0, 0)
+              return fechaMax >= nowDate && fechaMax <= tomorrow
             case 'pendientes':
               return estado === 'pendiente'
             case 'en_proceso':
