@@ -714,16 +714,21 @@ export default {
         console.log('Datos a guardar:', datosActualizados);
         await api.put(`/reasignados/${this.documentoSeleccionado.id}`, datosActualizados);
         console.log('✓ Documento actualizado');
-        alert('✓ Estado actualizado correctamente');
+
         // Cerrar modal
         const modal = window.bootstrap.Modal.getInstance(document.getElementById('modalDetalleDocumento'));
         if (modal) modal.hide();
-        // Recargar datos
-        this.loadData();
+
+        // Mostrar confirmación sin bloquear la recarga
+        console.log('🔄 Recargando datos del dashboard...');
+
+        // Recargar datos y esperar a que complete
+        await this.loadData();
+        console.log('✓ Dashboard actualizado correctamente');
       } catch (err) {
         console.error('Error guardando cambios:', err);
         console.error('Respuesta del servidor:', err.response?.data);
-        alert('Error al guardar: ' + (err.response?.data?.message || err.response?.data?.error || err.message));
+        alert('❌ Error al guardar: ' + (err.response?.data?.message || err.response?.data?.error || err.message));
       } finally {
         this.isSaving = false;
       }
