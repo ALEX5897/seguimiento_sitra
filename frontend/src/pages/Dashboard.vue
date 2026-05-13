@@ -357,12 +357,26 @@ export default {
         console.log('Estados no contabilizados:', this.estadosDistintos);
         console.log('Resumen: Reasignados:', this.counts.reasignados, 'Pendientes:', this.counts.pendientes, 'Vencidos:', this.counts.vencidos, 'Próximos:', this.counts.proximosVencer, 'Completos:', this.counts.completos, 'Otros:', this.counts.otros, 'Total:', this.counts.pendientes + this.counts.vencidos + this.counts.proximosVencer + this.counts.completos + this.counts.otros);
 
+        // Construir datos de importancia dinámicamente desde los documentos
+        const conteoImportancia = {};
+        docs.forEach(doc => {
+          const imp = (doc.importancia || 'No especificada').trim();
+          if (!conteoImportancia[imp]) {
+            conteoImportancia[imp] = { importancia: imp, pendientes: 0 };
+          }
+          const estado = (doc.estado || '').toString().toLowerCase().trim();
+          if (estado === 'pendiente') {
+            conteoImportancia[imp].pendientes++;
+          }
+        });
+        this.reasignadosPorImportancia = Object.values(conteoImportancia);
+        console.log('✓ Reasignados por importancia construidos:', this.reasignadosPorImportancia);
+
         // Load statistics (only reasignados-related)
         console.log('Loading reasignados statistics...');
-        const [kpiReas, reasxUsuario, reasxImportancia, tiempoPromedio] = await Promise.all([
+        const [kpiReas, reasxUsuario, tiempoPromedio] = await Promise.all([
           api.get('/estadisticas/kpi/reasignados').catch(e => { console.error('kpiReasignados error:', e); return {data: {}}; }),
           api.get('/estadisticas/kpi/reasignados-por-usuario').catch(e => { console.error('reasignadosPorUsuario error:', e); return {data: []}; }),
-          api.get('/estadisticas/kpi/reasignados-por-importancia').catch(e => { console.error('reasignadosPorImportancia error:', e); return {data: []}; }),
           api.get('/estadisticas/kpi/tiempo-promedio-respuesta').catch(e => { console.error('tiempoPromedio error:', e); return {data: {}}; })
         ]);
 
@@ -370,7 +384,6 @@ export default {
         this.kpiReasignados.tiempoPromedioRespuesta = tiempoPromedio.data?.tiempo_promedio_dias || 0;
         this.kpiReasignados.documentosResueltos = tiempoPromedio.data?.documentos_resueltos || 0;
         this.reasignadosPorUsuario = reasxUsuario.data;
-        this.reasignadosPorImportancia = reasxImportancia.data;
 
         console.log('Reasignados statistics loaded');
 
