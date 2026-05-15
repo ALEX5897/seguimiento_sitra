@@ -1,11 +1,5 @@
 <template>
-  <div class="container-fluid p-4">
-    <!-- Encabezado -->
-    <div class="mb-5">
-      <h1 class="page-title">📋 Documentos Reasignados</h1>
-      <p class="text-muted">Gestión de documentos reasignados y control de plazos</p>
-    </div>
-
+  <div class="container-fluid p-4 main-container">
     <!-- Acciones -->
     <div class="row mb-4">
       <div class="col-auto" v-if="!esSoloLectura">
@@ -104,8 +98,8 @@
 
     <!-- Tabla Mejorada -->
     <div class="card">
-      <div class="card-body">
-        <div class="table-responsive">
+      <div class="card-body p-0">
+        <div class="table-responsive table-scrollable">
           <table class="table table-hover mb-0">
             <thead>
               <tr>
@@ -159,9 +153,11 @@
             </tbody>
           </table>
         </div>
+      </div>
 
-        <!-- Paginación -->
-        <div class="d-flex justify-content-between align-items-center mt-3">
+      <!-- Paginación -->
+      <div class="card-body pt-3 pb-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
           <div class="text-muted small">
             Mostrando {{ Math.min((paginaActual-1)*porPagina+1, itemsFiltrados.length) }}–
             {{ Math.min(paginaActual*porPagina, itemsFiltrados.length) }}
@@ -397,6 +393,23 @@
                       {{ imp.icono ? imp.icono + ' ' : '' }}{{ imp.nombre }}
                     </option>
                   </select>
+                </div>
+                <div class="col-12 mb-3 pt-3 border-top">
+                  <div class="form-check form-switch">
+                    <input
+                      v-model="form.notificar"
+                      class="form-check-input"
+                      type="checkbox"
+                      id="notificarSwitch"
+                      :checked="form.notificar !== false"
+                    >
+                    <label class="form-check-label" for="notificarSwitch">
+                      📧 Notificar por correo al guardar
+                    </label>
+                  </div>
+                  <small class="text-muted d-block mt-1">
+                    Si está activado, se enviarán notificaciones sobre documentos nuevos, tardíos, próximos a vencer o cambios de estado.
+                  </small>
                 </div>
               </div>
             </form>
@@ -693,8 +706,9 @@ export default {
     openCreate() {
       if (this.esSoloLectura) return;
       this.form = {
-        importancia: 'Media',
-        estado: 'pendiente'
+        importancia: 'Normal',
+        estado: 'Pendiente',
+        notificar: true
       };
       this.pastedData = '';
       this.usuarioSeleccionado = null;
@@ -847,10 +861,15 @@ export default {
         return;
       }
 
-      const values = this.pastedData.trim().split('\t').map(v => v.trim());
+      // Limpiar y separar valores, filtrando valores vacíos
+      const values = this.pastedData
+        .trim()
+        .split('\t')
+        .map(v => v.trim())
+        .filter(v => v.length > 0);
 
-      if (values.length !== 12) {
-        showToast(`Se esperaban 12 valores, se encontraron ${values.length}. Asegúrate de que los datos estén separados por tabulaciones.`, 'warning');
+      if (values.length !== 11) {
+        showToast(`Se esperaban 11 valores, se encontraron ${values.length}. Verifica los datos pegados.`, 'warning');
         return;
       }
 
@@ -882,14 +901,13 @@ export default {
         this.form.numero_documento = values[8].trim();
         this.form.tipo_documento = values[9].trim();
         this.form.numero_tramite = values[10].trim();
-        this.form.estado = values[11].trim();
+
+        // Estado se asigna por defecto
+        this.form.estado = 'Pendiente';
 
         // Establecer valores por defecto si no están definidos
         if (!this.form.importancia) {
-          this.form.importancia = 'Media';
-        }
-        if (!this.form.estado) {
-          this.form.estado = 'pendiente';
+          this.form.importancia = 'Normal';
         }
 
         // Buscar y seleccionar usuario automáticamente
@@ -1142,3 +1160,62 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.main-container {
+  overflow-y: auto;
+  max-height: 100vh;
+  padding-bottom: 1rem;
+}
+
+.table-scrollable {
+  max-height: 55vh;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+}
+
+.table {
+  font-size: 0.75rem;
+  margin-bottom: 0;
+  min-width: 1000px;
+  width: 100%;
+}
+
+.table th,
+.table td {
+  padding: 0.35rem 0.4rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f1f5f9;
+  z-index: 10;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.4rem;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.card-body.p-0 {
+  padding: 0;
+}
+
+.table-responsive {
+  margin-bottom: 0;
+}
+</style>

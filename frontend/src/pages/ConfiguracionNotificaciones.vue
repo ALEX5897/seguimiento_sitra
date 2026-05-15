@@ -346,4 +346,86 @@ export default {
   font-size: 0.875rem;
   padding: 0.5rem 0.75rem;
 }
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .card {
+    margin-bottom: 1rem;
+  }
+
+  .card-header {
+    padding: 0.75rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .form-control,
+  .form-select {
+    font-size: 0.9rem;
+  }
+
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.6rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .card {
+    margin-bottom: 0.75rem;
+    border-radius: 6px;
+  }
+
+  .card-header {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .card-body {
+    padding: 0.75rem;
+  }
+
+  .form-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .form-control,
+  .form-select {
+    font-size: 16px;
+    padding: 0.4rem;
+  }
+
+  .form-check {
+    margin-bottom: 0.75rem;
+  }
+
+  .form-check-label {
+    font-size: 0.85rem;
+  }
+
+  .btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  h3, h4, h5 {
+    font-size: 1rem;
+  }
+
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+}
 </style>

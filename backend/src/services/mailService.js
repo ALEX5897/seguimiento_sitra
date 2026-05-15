@@ -481,11 +481,11 @@ async function enviarNotificacionComentario(datos) {
     `;
 
     const resultado = await transporter.sendMail({
-      from: emailFrom,
+      from: `"${smtpConfig.email_from_name}" <${smtpConfig.email_from}>`,
       to: destinatario,
       subject: `💬 ${mensaje}`,
       html: html,
-      replyTo: emailFrom
+      replyTo: smtpConfig.email_reply_to || smtpConfig.email_from
     });
 
     console.log(`✅ Correo de comentario enviado a ${destinatario}: ${resultado.messageId}`);
@@ -576,11 +576,11 @@ async function enviarNotificacionCambioEstado(datos) {
     `;
 
     const resultado = await transporter.sendMail({
-      from: emailFrom,
+      from: `"${smtpConfig.email_from_name}" <${smtpConfig.email_from}>`,
       to: destinatario,
       subject: `📝 Estado actualizado: ${estadoNuevo}`,
       html: html,
-      replyTo: emailFrom
+      replyTo: smtpConfig.email_reply_to || smtpConfig.email_from
     });
 
     console.log(`✅ Correo de cambio de estado enviado a ${destinatario}: ${resultado.messageId}`);
@@ -607,8 +607,14 @@ module.exports = {
 // Función de prueba para enviar correo manual
 if (require.main === module) {
   (async () => {
+    const testEmail = process.env.MAIL_TO_PRUEBA || process.env.NOTIFICATION_TEST_EMAIL;
+    if (!testEmail) {
+      console.log('⚠️ No se configuró MAIL_TO_PRUEBA o NOTIFICATION_TEST_EMAIL para enviar correo de prueba');
+      return;
+    }
+
     const usuario = {
-      correo: process.env.MAIL_TO_PRUEBA || 'acasa@quito-turismo.gob.ec',
+      correo: testEmail,
       nombre: 'Prueba Notificación'
     };
     const documentos = [
@@ -617,14 +623,14 @@ if (require.main === module) {
         numero_tramite: 'TR-PRUEBA-001',
         tipo_documento: 'Memo',
         remitente: 'Admin',
-        destinatario: 'acasa@quito-turismo.gob.ec',
+        destinatario: usuario.nombre,
         asunto: 'Prueba de envío',
         fecha_max_respuesta: new Date(),
       }
     ];
     const ok = await enviarNotificacionDocumentos(usuario, documentos, 'expirado');
     if (ok) {
-      console.log('✅ Correo de prueba enviado correctamente');
+      console.log('✅ Correo de prueba enviado correctamente a:', testEmail);
     } else {
       console.log('❌ Error al enviar correo de prueba');
     }

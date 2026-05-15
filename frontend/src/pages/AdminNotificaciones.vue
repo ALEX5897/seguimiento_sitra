@@ -308,6 +308,155 @@
           </div>
         </div>
       </div>
+
+      <!-- Configuración SMTP Avanzada -->
+      <div class="col-md-12 mb-4">
+        <div class="card">
+          <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-envelope-at-fill"></i> Configuración SMTP Avanzada</h5>
+          </div>
+          <div class="card-body">
+            <p class="small text-muted mb-4">
+              Personaliza los parámetros de envío de correos (remitente, copias, servidor SMTP, etc.)
+            </p>
+
+            <div class="row">
+              <!-- Remitente -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Email From (Remitente)</strong></label>
+                <input
+                  type="email"
+                  class="form-control"
+                  v-model="smtpConfig.email_from"
+                  placeholder="notificaciones@quito-turismo.gob.ec"
+                />
+                <small class="text-muted">Dirección de correo que aparece como remitente</small>
+              </div>
+
+              <!-- Nombre Remitente -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Nombre del Remitente</strong></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  v-model="smtpConfig.email_from_name"
+                  placeholder="SITRA - Sistema de Seguimiento"
+                />
+                <small class="text-muted">Nombre que aparece en el correo</small>
+              </div>
+
+              <!-- Email Reply-To -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Responder A</strong></label>
+                <input
+                  type="email"
+                  class="form-control"
+                  v-model="smtpConfig.email_reply_to"
+                  placeholder="soporte@quito-turismo.gob.ec"
+                />
+                <small class="text-muted">Correo a donde responderán los usuarios</small>
+              </div>
+
+              <!-- CC -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Copias CC</strong></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  v-model="smtpConfig.email_cc"
+                  placeholder="admin@quito-turismo.gob.ec, supervisor@quito-turismo.gob.ec"
+                />
+                <small class="text-muted">Separa múltiples correos con coma</small>
+              </div>
+
+              <!-- BCC -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Copias BCC (Ocultas)</strong></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  v-model="smtpConfig.email_bcc"
+                  placeholder="auditoria@quito-turismo.gob.ec"
+                />
+                <small class="text-muted">Copias ocultas (no visible para destinatarios)</small>
+              </div>
+
+              <!-- Línea divisora -->
+              <div class="col-md-12 my-3">
+                <hr />
+                <h6 class="text-secondary">Configuración SMTP</h6>
+              </div>
+
+              <!-- SMTP Host -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Servidor SMTP</strong></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  v-model="smtpConfig.smtp_host"
+                  placeholder="smtp.office365.com"
+                />
+                <small class="text-muted">Ej: smtp.office365.com, smtp.gmail.com</small>
+              </div>
+
+              <!-- SMTP Port -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Puerto SMTP</strong></label>
+                <input
+                  type="number"
+                  class="form-control"
+                  v-model.number="smtpConfig.smtp_port"
+                  placeholder="587"
+                />
+                <small class="text-muted">Comúnmente 587 o 465</small>
+              </div>
+
+              <!-- SMTP User -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Usuario SMTP</strong></label>
+                <input
+                  type="email"
+                  class="form-control"
+                  v-model="smtpConfig.smtp_user"
+                  placeholder="notificaciones@quito-turismo.gob.ec"
+                />
+              </div>
+
+              <!-- SMTP Password -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Contraseña SMTP</strong></label>
+                <input
+                  type="password"
+                  class="form-control"
+                  v-model="smtpConfig.smtp_password"
+                  placeholder="••••••••••"
+                />
+                <small class="text-muted">⚠️ Se guardarála en la BD</small>
+              </div>
+
+              <!-- Botones -->
+              <div class="col-md-12 mt-4">
+                <button
+                  @click="guardarConfiguracionSMTP"
+                  :disabled="guardandoSMTPConfig"
+                  class="btn btn-info"
+                >
+                  <span v-if="guardandoSMTPConfig" class="spinner-border spinner-border-sm me-2"></span>
+                  <i class="bi bi-check-circle me-1"></i>
+                  Guardar Configuración SMTP
+                </button>
+                <button
+                  @click="cargarConfiguracionSMTP"
+                  class="btn btn-secondary ms-2"
+                >
+                  <i class="bi bi-arrow-clockwise me-1"></i>
+                  Recargar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modal para editar plantilla -->
@@ -427,13 +576,26 @@ export default {
       mostrarModalPlantilla: false,
       mostrarPreview: false,
       plantillaActual: {},
-      guardandoPlantilla: false
+      guardandoPlantilla: false,
+      smtpConfig: {
+        email_from: '',
+        email_from_name: '',
+        email_reply_to: '',
+        email_cc: '',
+        email_bcc: '',
+        smtp_host: '',
+        smtp_port: 587,
+        smtp_user: '',
+        smtp_password: ''
+      },
+      guardandoSMTPConfig: false
     };
   },
   mounted() {
     this.cargarConfiguracion();
     this.cargarStatus();
     this.cargarPlantillas();
+    this.cargarConfiguracionSMTP();
   },
   methods: {
     async cargarConfiguracion() {
@@ -695,6 +857,77 @@ export default {
         'proximo_vencer': 'bi bi-clock-history'
       };
       return iconos[tipo] || 'bi bi-file-text';
+    },
+
+    async cargarConfiguracionSMTP() {
+      try {
+        const response = await fetch('/api/admin/notificaciones/smtp-config', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        this.smtpConfig = {
+          id: data.id,
+          email_from: data.email_from || '',
+          email_from_name: data.email_from_name || '',
+          email_reply_to: data.email_reply_to || '',
+          email_cc: data.email_cc || '',
+          email_bcc: data.email_bcc || '',
+          smtp_host: data.smtp_host || '',
+          smtp_port: data.smtp_port || 587,
+          smtp_user: data.smtp_user || '',
+          smtp_password: data.smtp_password || ''
+        };
+      } catch (error) {
+        console.error('Error cargando configuración SMTP:', error);
+        this.mostrarError('Error al cargar configuración SMTP: ' + error.message);
+      }
+    },
+
+    async guardarConfiguracionSMTP() {
+      try {
+        this.guardandoSMTPConfig = true;
+
+        const response = await fetch('/api/admin/notificaciones/smtp-config', {
+          method: 'PUT',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email_from: this.smtpConfig.email_from,
+            email_from_name: this.smtpConfig.email_from_name,
+            email_reply_to: this.smtpConfig.email_reply_to,
+            email_cc: this.smtpConfig.email_cc,
+            email_bcc: this.smtpConfig.email_bcc,
+            smtp_host: this.smtpConfig.smtp_host,
+            smtp_port: this.smtpConfig.smtp_port,
+            smtp_user: this.smtpConfig.smtp_user,
+            smtp_password: this.smtpConfig.smtp_password
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        this.mostrarExito('✅ Configuración SMTP guardada correctamente');
+        console.log('Configuración actualizada:', data);
+      } catch (error) {
+        console.error('Error guardando configuración SMTP:', error);
+        this.mostrarError('Error al guardar configuración SMTP: ' + error.message);
+      } finally {
+        this.guardandoSMTPConfig = false;
+      }
     }
   }
 };
@@ -718,5 +951,103 @@ export default {
 .badge {
   font-size: 0.875rem;
   padding: 0.5rem 0.75rem;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .table {
+    font-size: 0.85rem;
+  }
+
+  .table thead th {
+    padding: 0.5rem 0.25rem !important;
+  }
+
+  .table td {
+    padding: 0.4rem 0.25rem !important;
+  }
+
+  .card {
+    margin-bottom: 1rem;
+  }
+
+  .card-header {
+    padding: 0.75rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.6rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .table {
+    font-size: 0.7rem;
+  }
+
+  .table thead th {
+    padding: 0.4rem 0.15rem !important;
+    font-size: 0.65rem;
+  }
+
+  .table td {
+    padding: 0.3rem 0.15rem !important;
+  }
+
+  .card {
+    margin-bottom: 0.75rem;
+    border-radius: 6px;
+  }
+
+  .card-header {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .card-body {
+    padding: 0.75rem;
+  }
+
+  .form-control,
+  .form-select {
+    font-size: 16px;
+    padding: 0.4rem;
+  }
+
+  .form-check {
+    margin-bottom: 0.75rem;
+  }
+
+  .form-check-label {
+    font-size: 0.85rem;
+  }
+
+  .btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  h3, h4, h5 {
+    font-size: 1rem;
+  }
+
+  .modal-dialog {
+    margin: 0.5rem;
+  }
 }
 </style>

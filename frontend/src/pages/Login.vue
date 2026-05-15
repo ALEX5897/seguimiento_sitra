@@ -1,5 +1,5 @@
 <template>
-  <div class="login-container">
+  <div class="login-container" v-if="!redirigiendo">
     <!-- Fondo fotográfico con overlay -->
     <div class="login-bg"></div>
     <div class="login-overlay"></div>
@@ -59,15 +59,26 @@
                 <label for="contrasena-kc" class="form-label">Contraseña</label>
                 <a href="#" class="forgot-password">¿Olvidó su contraseña?</a>
               </div>
-              <input
-                id="contrasena-kc"
-                v-model="formularioKeycloak.contrasena"
-                type="password"
-                class="form-control"
-                placeholder="••••••••"
-                required
-                :disabled="cargando"
-              />
+              <div class="password-input-wrapper">
+                <input
+                  id="contrasena-kc"
+                  v-model="formularioKeycloak.contrasena"
+                  :type="showPasswordKC ? 'text' : 'password'"
+                  class="form-control"
+                  placeholder="••••••••"
+                  required
+                  :disabled="cargando"
+                />
+                <button
+                  type="button"
+                  class="btn-show-password"
+                  @click="showPasswordKC = !showPasswordKC"
+                  :disabled="cargando"
+                  title="Ver/Ocultar contraseña"
+                >
+                  <i :class="showPasswordKC ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+                </button>
+              </div>
             </div>
 
             <!-- Checkbox Recuérdame -->
@@ -124,15 +135,26 @@
 
             <div class="form-group">
               <label for="contrasena-admin" class="form-label">Contraseña</label>
-              <input
-                id="contrasena-admin"
-                v-model="formularioAdmin.contrasena"
-                type="password"
-                class="form-control"
-                placeholder="••••••••"
-                required
-                :disabled="cargando"
-              />
+              <div class="password-input-wrapper">
+                <input
+                  id="contrasena-admin"
+                  v-model="formularioAdmin.contrasena"
+                  :type="showPasswordAdmin ? 'text' : 'password'"
+                  class="form-control"
+                  placeholder="••••••••"
+                  required
+                  :disabled="cargando"
+                />
+                <button
+                  type="button"
+                  class="btn-show-password"
+                  @click="showPasswordAdmin = !showPasswordAdmin"
+                  :disabled="cargando"
+                  title="Ver/Ocultar contraseña"
+                >
+                  <i :class="showPasswordAdmin ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+                </button>
+              </div>
             </div>
 
             <button
@@ -215,16 +237,29 @@ export default {
       keycloakHabilitado: false,
       cargando: false,
       error: null,
-      exito: null
+      exito: null,
+      showPasswordKC: false,
+      showPasswordAdmin: false,
+      redirigiendo: false
     };
   },
   async mounted() {
     if (this.authStore.isAuthenticated) {
+      this.redirigiendo = true;
       this.$router.push('/dashboard');
       return;
     }
 
     await this.verificarKeycloak();
+  },
+  watch: {
+    'authStore.isAuthenticated'(nuevoValor) {
+      if (nuevoValor === true) {
+        console.log('✅ Usuario autenticado detectado, redirigiendo...');
+        this.redirigiendo = true;
+        this.$router.push('/dashboard');
+      }
+    }
   },
   methods: {
     async verificarKeycloak() {
@@ -253,10 +288,11 @@ export default {
         );
 
         this.exito = '¡Bienvenido! Redirigiendo...';
+        this.redirigiendo = true;
 
         setTimeout(() => {
           this.$router.push('/dashboard');
-        }, 1000);
+        }, 100);
       } catch (err) {
         this.error = err.message || 'Credenciales inválidas. Intenta nuevamente.';
       } finally {
@@ -273,10 +309,11 @@ export default {
         await this.authStore.login(this.formulario.correo, null);
 
         this.exito = '¡Bienvenido! Redirigiendo...';
+        this.redirigiendo = true;
 
         setTimeout(() => {
           this.$router.push('/dashboard');
-        }, 1000);
+        }, 100);
       } catch (err) {
         this.error = err.message || 'Error al iniciar sesión. Intenta nuevamente.';
       } finally {
@@ -314,10 +351,11 @@ export default {
         this.authStore.permisos = data.usuario?.permisos || {};
 
         this.exito = '¡Bienvenido! Redirigiendo...';
+        this.redirigiendo = true;
 
         setTimeout(() => {
           this.$router.push('/dashboard');
-        }, 1000);
+        }, 100);
       } catch (err) {
         this.error = err.message || 'Error al iniciar sesión. Intenta nuevamente.';
       } finally {
@@ -527,6 +565,41 @@ export default {
 .form-control::placeholder {
   color: #b0b0b0;
   font-weight: 400;
+}
+
+/* Password input wrapper */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper .form-control {
+  padding-right: 44px;
+}
+
+.btn-show-password {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: color 0.3s ease;
+}
+
+.btn-show-password:hover:not(:disabled) {
+  color: #34446C;
+}
+
+.btn-show-password:disabled {
+  color: #ccc;
+  cursor: not-allowed;
 }
 
 .form-control:disabled {

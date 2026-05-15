@@ -159,6 +159,8 @@ body {
   border-collapse: separate;
   border-spacing: 0;
   margin-bottom: 0;
+  width: 100%;
+  font-size: 0.75rem;
 }
 
 .table thead th {
@@ -167,16 +169,17 @@ body {
   font-weight: 600;
   border: none;
   border-bottom: 2px solid #e2e8f0;
-  padding: 12px 16px;
-  font-size: 0.875rem;
+  padding: 0.35rem 0.3rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
 .table tbody td {
-  padding: 12px 16px;
+  padding: 0.35rem 0.3rem;
   border-bottom: 1px solid #e2e8f0;
   vertical-align: middle;
+  font-size: 0.75rem;
 }
 
 .table tbody tr:hover {
@@ -187,12 +190,21 @@ body {
   border-bottom: none;
 }
 
-/* Badges mejorados */
+/* Wrapper para tablas con scroll */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+/* Badges mejorados - Compatible con zoom */
 .badge {
-  padding: 6px 12px;
+  padding: 0.25rem 0.5rem;
   border-radius: 20px;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
+  display: inline-block;
+  white-space: nowrap;
 }
 
 .badge.bg-danger {
@@ -225,12 +237,14 @@ body {
   color: #1e293b;
 }
 
-/* Botones */
+/* Botones - Compatible con zoom */
 .btn {
-  border-radius: 6px;
+  border-radius: 0.375rem;
   font-weight: 500;
   transition: all 0.2s ease;
   border: none;
+  white-space: nowrap;
+  min-width: fit-content;
 }
 
 .btn-primary {
@@ -305,9 +319,359 @@ input[type="range"]::-moz-range-track { background: var(--primary-color); }
 input[type="range"]::-moz-range-thumb { background: #2754a2; }
 
 /* Sidebar width and logo sizing */
-.sidebar { width: 250px; }
+.sidebar { width: 200px; }
 .app-logo { height: 48px; width: auto; }
 
 @media (max-width: 767px) {
 	.app-logo { height: 36px; }
+
+	/* KPI Cards responsive */
+	.kpi-icon {
+		font-size: 1.8rem;
+	}
+
+	.kpi-number {
+		font-size: 1.8rem;
+	}
+
+	.kpi-title {
+		font-size: 0.75rem;
+	}
+
+	/* Table responsive */
+	.table {
+		font-size: 0.85rem;
+	}
+
+	.table thead th {
+		padding: 8px 12px;
+		font-size: 0.75rem;
+	}
+
+	.table tbody td {
+		padding: 8px 12px;
+	}
+
+	/* Card responsive */
+	.card-body {
+		padding: 1rem;
+	}
+
+	.card-header {
+		padding: 0.875rem;
+	}
+
+	.page-title {
+		font-size: 1.25rem;
+		margin-bottom: 1rem;
+	}
+
+	/* Buttons responsive */
+	.btn {
+		padding: 0.4rem 0.8rem;
+		font-size: 0.85rem;
+	}
+
+	.btn-sm {
+		padding: 0.25rem 0.5rem;
+		font-size: 0.75rem;
+	}
+
+	/* Form elements */
+	.form-control,
+	.form-select {
+		font-size: 1rem;
+		padding: 0.5rem 0.75rem;
+	}
+
+	/* Info group responsive */
+	.info-group {
+		padding: 10px 12px;
+	}
+
+	/* Modal responsive */
+	.modal-content {
+		border-radius: 12px;
+	}
+
+	.modal-header {
+		padding: 1rem;
+	}
+
+	.modal-body {
+		padding: 1rem;
+	}
+}
+
+@media (max-width: 576px) {
+	/* General adjustments */
+	body {
+		font-size: 14px;
+	}
+
+	.app-main {
+		padding: 0.5rem !important;
+	}
+
+	/* Page title */
+	.page-title {
+		font-size: 1.1rem;
+		margin-bottom: 0.75rem;
+	}
+
+	/* Headers */
+	h1 { font-size: 1.25rem; }
+	h2 { font-size: 1.1rem; }
+	h3 { font-size: 0.95rem; }
+	h4 { font-size: 0.85rem; }
+	h5 { font-size: 0.8rem; }
+
+	/* KPI Card responsive */
+	.kpi-card {
+		padding: 12px;
+		border-radius: 8px;
+	}
+
+	.kpi-icon {
+		font-size: 1.5rem;
+		margin-bottom: 6px;
+	}
+
+	.kpi-number {
+		font-size: 1.5rem;
+		margin-bottom: 8px;
+	}
+
+	.kpi-title {
+		font-size: 0.65rem;
+		margin-bottom: 4px;
+	}
+
+	.kpi-button {
+		padding: 4px 8px;
+		font-size: 0.7rem;
+	}
+
+	/* Table responsive with horizontal scroll */
+	.table {
+		font-size: 0.75rem;
+		display: block;
+		width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.table thead,
+	.table tbody,
+	.table tr,
+	.table th,
+	.table td {
+		display: block;
+	}
+
+	.table thead {
+		display: none;
+	}
+
+	.table tbody tr {
+		margin-bottom: 1rem;
+		border: 1px solid #e2e8f0;
+		border-radius: 4px;
+	}
+
+	.table tbody td {
+		padding: 0.5rem;
+		border-bottom: 1px solid #f1f5f9;
+		text-align: right;
+	}
+
+	.table tbody td::before {
+		content: attr(data-label);
+		float: left;
+		font-weight: 600;
+		text-align: left;
+	}
+
+	/* Card responsive */
+	.card {
+		margin-bottom: 1rem;
+		border-radius: 8px;
+	}
+
+	.card-body {
+		padding: 0.75rem;
+	}
+
+	.card-header {
+		padding: 0.75rem;
+		font-size: 0.9rem;
+	}
+
+	/* Buttons responsive */
+	.btn {
+		padding: 0.35rem 0.6rem;
+		font-size: 0.75rem;
+		border-radius: 4px;
+	}
+
+	.btn-sm {
+		padding: 0.2rem 0.4rem;
+		font-size: 0.65rem;
+	}
+
+	.btn-lg {
+		padding: 0.5rem 0.8rem;
+		font-size: 0.85rem;
+	}
+
+	/* Form elements */
+	.form-control,
+	.form-select {
+		font-size: 16px;
+		padding: 0.4rem 0.6rem;
+		border-radius: 4px;
+	}
+
+	.form-group {
+		margin-bottom: 0.75rem;
+	}
+
+	.form-label {
+		font-size: 0.85rem;
+		margin-bottom: 0.25rem;
+	}
+
+	/* Input groups */
+	.input-group {
+		flex-wrap: wrap;
+		gap: 0.25rem;
+	}
+
+	.input-group > * {
+		min-width: 100%;
+	}
+
+	.input-group > :not(:last-child) {
+		border-radius: 4px 4px 0 0;
+	}
+
+	.input-group > :last-child {
+		border-radius: 0 0 4px 4px;
+		margin-top: 0.25rem;
+	}
+
+	/* Modal responsive */
+	.modal-dialog {
+		margin: 0.5rem;
+		max-width: calc(100% - 1rem);
+	}
+
+	.modal-content {
+		border-radius: 8px;
+	}
+
+	.modal-header {
+		padding: 0.75rem;
+	}
+
+	.modal-body {
+		padding: 0.75rem;
+		max-height: calc(100vh - 200px);
+		overflow-y: auto;
+	}
+
+	.modal-footer {
+		padding: 0.75rem;
+	}
+
+	/* Badge responsive */
+	.badge {
+		font-size: 0.65rem;
+		padding: 4px 8px;
+	}
+
+	/* Alert responsive */
+	.alert {
+		padding: 0.75rem;
+		font-size: 0.85rem;
+		margin-bottom: 0.75rem;
+	}
+
+	/* Info group responsive */
+	.info-group {
+		padding: 8px 10px;
+		border-left-width: 2px;
+	}
+
+	.info-group label {
+		font-size: 0.8rem;
+		margin-bottom: 4px;
+	}
+
+	/* Dropdown responsive */
+	.dropdown-menu {
+		font-size: 0.85rem;
+	}
+
+	.dropdown-item {
+		padding: 0.5rem 1rem;
+	}
+
+	/* Padding and margin utilities */
+	.p-0 { padding: 0 !important; }
+	.p-1 { padding: 0.25rem !important; }
+	.p-2 { padding: 0.5rem !important; }
+	.p-3 { padding: 0.75rem !important; }
+	.p-4 { padding: 1rem !important; }
+	.p-5 { padding: 1.5rem !important; }
+
+	.m-0 { margin: 0 !important; }
+	.m-1 { margin: 0.25rem !important; }
+	.m-2 { margin: 0.5rem !important; }
+	.m-3 { margin: 0.75rem !important; }
+	.m-4 { margin: 1rem !important; }
+	.m-5 { margin: 1.5rem !important; }
+
+	.mb-2 { margin-bottom: 0.5rem !important; }
+	.mb-3 { margin-bottom: 0.75rem !important; }
+	.mb-4 { margin-bottom: 1rem !important; }
+	.mb-5 { margin-bottom: 1.5rem !important; }
+
+	/* Sidebar */
+	.sidebar {
+		width: 100%;
+		position: fixed;
+		left: -100%;
+		transition: left 0.3s ease;
+		max-width: 80vw;
+		z-index: 1040;
+	}
+
+	.sidebar.show {
+		left: 0;
+	}
+
+	.app-logo {
+		height: 28px;
+	}
+}
+
+/* Escalado flexible para todos los elementos */
+html {
+	font-size: 16px;
+	scroll-behavior: smooth;
+}
+
+/* Asegurar que los inputs escalen bien */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"],
+select,
+textarea {
+	font-size: 1rem;
+	padding: 0.5rem 0.75rem;
 }

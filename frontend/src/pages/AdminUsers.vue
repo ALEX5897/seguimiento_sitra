@@ -858,4 +858,147 @@ export default {
 input-group-text {
   background: white;
 }
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .admin-users-container {
+    padding: 0 1rem;
+  }
+
+  .page-header {
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .nav-tabs .nav-link {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .table {
+    font-size: 0.85rem;
+  }
+
+  .table thead th {
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.75rem;
+  }
+
+  .table td {
+    padding: 0.4rem 0.25rem !important;
+  }
+
+  .btn-group-sm .btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.65rem;
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .form-control {
+    font-size: 0.9rem;
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .admin-users-container {
+    padding: 0 0.5rem;
+  }
+
+  .page-header {
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .page-header h2 {
+    font-size: 1rem;
+  }
+
+  .nav-tabs {
+    border-bottom: 1px solid #dee2e6;
+  }
+
+  .nav-tabs .nav-link {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .table {
+    font-size: 0.7rem;
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table thead th {
+    padding: 0.4rem 0.15rem !important;
+    font-size: 0.65rem;
+  }
+
+  .table td {
+    padding: 0.3rem 0.15rem !important;
+  }
+
+  .btn-group-sm .btn {
+    padding: 0.15rem 0.3rem;
+    font-size: 0.6rem;
+  }
+
+  .badge {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .form-control {
+    font-size: 16px;
+    padding: 0.4rem;
+  }
+
+  .form-group {
+    margin-bottom: 0.5rem;
+  }
+
+  .form-label {
+    font-size: 0.8rem;
+  }
+
+  .card {
+    border-radius: 6px;
+    margin-bottom: 1rem;
+  }
+
+  .card-body {
+    padding: 0.75rem;
+  }
+
+  .card-header {
+    padding: 0.75rem;
+  }
+
+  .btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+
+  .modal-content {
+    border-radius: 8px;
+  }
+
+  .input-group {
+    flex-wrap: wrap;
+  }
+
+  .input-group-text {
+    font-size: 0.8rem;
+  }
+}
 </style>

@@ -242,4 +242,110 @@ export default {
 .border-dashed {
   border-style: dashed !important;
 }
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 1.3rem;
+  }
+
+  .card {
+    margin-bottom: 1rem;
+  }
+
+  .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .btn-lg {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .form-control {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 576px) {
+  h1 {
+    font-size: 1rem;
+  }
+
+  h3 {
+    font-size: 0.95rem;
+  }
+
+  .card {
+    margin-bottom: 0.75rem;
+    border-radius: 6px;
+  }
+
+  .card-header {
+    padding: 0.75rem;
+  }
+
+  .card-body {
+    padding: 0.75rem;
+  }
+
+  .btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    width: 100%;
+  }
+
+  .btn-lg {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .form-control {
+    font-size: 16px;
+    padding: 0.4rem;
+  }
+
+  .form-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .form-label {
+    font-size: 0.85rem;
+  }
+
+  .alert {
+    padding: 0.75rem;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .table {
+    font-size: 0.7rem;
+  }
+
+  .table thead th {
+    padding: 0.4rem 0.15rem !important;
+  }
+
+  .table td {
+    padding: 0.3rem 0.15rem !important;
+  }
+
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+
+  .modal-content {
+    border-radius: 8px;
+  }
+
+  .border-2 {
+    border-width: 1px !important;
+  }
+
+  .text-center {
+    text-align: center;
+  }
+}
 </style>

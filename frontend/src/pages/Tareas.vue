@@ -450,4 +450,57 @@ export default {
   margin: 0;
   color: #555;
 }
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 1.3rem;
+  }
+
+  .table {
+    font-size: 0.85rem;
+  }
+
+  .table thead th {
+    padding: 0.5rem 0.25rem !important;
+  }
+
+  .table td {
+    padding: 0.4rem 0.25rem !important;
+  }
+
+  .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .page-title {
+    font-size: 1rem;
+  }
+
+  .table {
+    font-size: 0.7rem;
+  }
+
+  .table thead th {
+    padding: 0.4rem 0.15rem !important;
+    font-size: 0.65rem;
+  }
+
+  .table td {
+    padding: 0.3rem 0.15rem !important;
+  }
+
+  .form-control {
+    font-size: 16px;
+    padding: 0.4rem;
+  }
+
+  .btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+  }
+}
 </style>

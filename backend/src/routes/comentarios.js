@@ -9,21 +9,30 @@ const { crearNotificacionSistema, obtenerNotificacionesUsuario } = require('../s
 router.get('/reasignados/:reasignadoId/comentarios', requireAuth, async (req, res) => {
   try {
     const { reasignadoId } = req.params;
-    
-    // Verificar que el documento existe
-    const [reasignado] = await db.query('SELECT id FROM reasignados WHERE id = ?', [reasignadoId]);
+    const usuario = req.usuarioAuth;
+
+    // Verificar que el documento existe y que el usuario tiene permiso
+    const [reasignado] = await db.query('SELECT id, usuario_id FROM reasignados WHERE id = ?', [reasignadoId]);
     if (!reasignado.length) {
       return res.status(404).json({ error: 'Documento no encontrado' });
     }
 
+    // Si no puede ver todo, verificar que es el usuario asignado
+    if (!canViewAll(usuario)) {
+      const usuarioId = await getUserIdFromCorreo(db, usuario.correo);
+      if (!usuarioId || reasignado[0].usuario_id !== usuarioId) {
+        return res.status(403).json({ error: 'Sin permiso para ver este documento' });
+      }
+    }
+
     // Obtener comentarios ordenados por fecha (más recientes primero)
     const [comentarios] = await db.query(
-      `SELECT 
-        id, reasignado_id, usuario_id, correo_usuario, nombre_usuario, 
-        tipo_usuario, contenido, tipo_comentario, fecha_hora, 
+      `SELECT
+        id, reasignado_id, usuario_id, correo_usuario, nombre_usuario,
+        tipo_usuario, contenido, tipo_comentario, fecha_hora,
         leido, creado_por, extra
-      FROM comentarios_reasignados 
-      WHERE reasignado_id = ? 
+      FROM comentarios_reasignados
+      WHERE reasignado_id = ?
       ORDER BY fecha_hora DESC`,
       [reasignadoId]
     );
@@ -56,6 +65,14 @@ router.post('/reasignados/:reasignadoId/comentarios', requireAuth, async (req, r
 
     if (!reasignado.length) {
       return res.status(404).json({ error: 'Documento reasignado no encontrado' });
+    }
+
+    // Verificar control de acceso: si no es admin/secretaria, debe ser usuario asignado
+    if (!canViewAll(usuario)) {
+      const usuarioId = await getUserIdFromCorreo(db, usuario.correo);
+      if (!usuarioId || reasignado[0].usuario_id !== usuarioId) {
+        return res.status(403).json({ error: 'Sin permiso para comentar en este documento' });
+      }
     }
 
     console.log(`📄 Documento: ${reasignado[0].numero_documento}, Usuario asignado: ${reasignado[0].reasignado_a}`);

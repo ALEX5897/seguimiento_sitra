@@ -9,6 +9,7 @@ import ReportReasignados from '../pages/ReportReasignados.vue'
 import ReportTareas from '../pages/ReportTareas.vue'
 import AdminUsers from '../pages/AdminUsers.vue'
 import AdminNotificaciones from '../pages/AdminNotificaciones.vue'
+import AdminRoles from '../pages/AdminRoles.vue'
 import Catalogos from '../pages/Catalogos.vue'
 import CargaMasiva from '../pages/CargaMasiva.vue'
 import KeycloakCallback from '../pages/KeycloakCallback.vue'
@@ -30,6 +31,7 @@ const routes = [
   { path: '/reportes/tareas', component: ReportTareas, meta: { requiereAuth: true } },
   { path: '/admin/usuarios', component: AdminUsers, meta: { requiereAuth: true, requiereAdmin: true } },
   { path: '/admin/notificaciones', component: AdminNotificaciones, meta: { requiereAuth: true, requiereAdmin: true } },
+  { path: '/admin/roles', component: AdminRoles, meta: { requiereAuth: true, requiereAdmin: true } },
   { path: '/catalogos', component: Catalogos, meta: { requiereAuth: true, requiereAdmin: true } },
   { path: '/carga-masiva', component: CargaMasiva, meta: { requiereAuth: true, requiereAdmin: true } },
 ]

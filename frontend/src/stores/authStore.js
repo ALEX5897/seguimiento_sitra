@@ -219,24 +219,29 @@ export const useAuthStore = defineStore('auth', {
      * Cierra la sesión del usuario
      */
     async logout() {
+      console.log('🚪 Cerrando sesión...');
       this.cargando = true;
 
       try {
-        await fetch('/api/auth/logout', {
+        const response = await fetch('/api/auth/logout', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           credentials: 'include'
         });
+
+        console.log('✅ Sesión cerrada en servidor');
       } catch (err) {
-        console.error('Error al cerrar sesión:', err);
+        console.error('⚠️ Error al cerrar sesión en servidor:', err);
       } finally {
+        // Limpiar datos locales
         this.usuario = null;
         this.isAuthenticated = false;
         this.permisos = {};
         this.cargando = false;
         this.error = null;
+        console.log('✅ Datos de usuario limpiados');
       }
     },
 

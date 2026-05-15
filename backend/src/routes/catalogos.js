@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// GET /api/catalogos/estados-reasignados - Obtener catálogo de estados (todos)
+// GET /api/catalogos/estados-reasignados - Obtener catálogo de estados (solo activos)
 router.get('/estados-reasignados', async (req, res) => {
   try {
     const [estados] = await db.query(
-      'SELECT id, codigo, nombre, descripcion, icono, color, activo FROM catalogo_estados_reasignados ORDER BY activo DESC, id ASC'
+      'SELECT id, codigo, nombre, descripcion, icono, color, activo FROM catalogo_estados_reasignados WHERE activo = true ORDER BY id ASC'
     );
     res.json(estados);
   } catch (err) {
@@ -87,11 +87,11 @@ router.delete('/estados-reasignados/:id', async (req, res) => {
 
 // ===== IMPORTANCIAS =====
 
-// GET /api/catalogos/importancias - Obtener catálogo de importancias (todos)
+// GET /api/catalogos/importancias - Obtener catálogo de importancias (solo activas)
 router.get('/importancias', async (req, res) => {
   try {
     const [importancias] = await db.query(
-      'SELECT id, codigo, nombre, descripcion, icono, color, activo FROM catalogo_importancias ORDER BY activo DESC, id ASC'
+      'SELECT id, codigo, nombre, descripcion, icono, color, activo FROM catalogo_importancias WHERE activo = true ORDER BY id ASC'
     );
     res.json(importancias);
   } catch (err) {
@@ -172,11 +172,11 @@ router.delete('/importancias/:id', async (req, res) => {
 
 // ===== GERENCIAS =====
 
-// GET /api/catalogos/gerencias - Obtener catálogo de gerencias (todos)
+// GET /api/catalogos/gerencias - Obtener catálogo de gerencias (solo activas)
 router.get('/gerencias', async (req, res) => {
   try {
     const [gerencias] = await db.query(
-      'SELECT id, codigo, nombre, descripcion, activo FROM catalogo_gerencias ORDER BY activo DESC, nombre ASC'
+      'SELECT id, codigo, nombre, descripcion, activo FROM catalogo_gerencias WHERE activo = true ORDER BY nombre ASC'
     );
     res.json(gerencias);
   } catch (err) {

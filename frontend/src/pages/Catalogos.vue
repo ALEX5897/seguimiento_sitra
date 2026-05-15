@@ -46,19 +46,30 @@
     <div class="tab-content">
       <!-- Estados de Reasignados -->
       <div v-if="activeTab === 'estados'" class="tab-pane fade show active">
-        <!-- Acciones -->
+        <!-- Acciones y Filtros -->
         <div class="row mb-4">
-          <div class="col-auto">
-            <button @click="openCreateEstado" class="btn btn-success" v-if="isAdmin">
+          <div class="col-12 col-md-auto mb-2 mb-md-0">
+            <button @click="openCreateEstado" class="btn btn-success w-100 w-md-auto" v-if="isAdmin">
               ➕ Nuevo Estado
             </button>
+          </div>
+          <div class="col-12 col-md">
+            <input
+              v-model="filtroEstados"
+              type="text"
+              class="form-control"
+              placeholder="🔍 Buscar por nombre o código..."
+              @input="currentPageEstados = 1" />
           </div>
         </div>
 
         <!-- Tabla de Estados -->
         <div class="card">
-          <div class="card-header bg-light">
-            <span>📊</span> Estados de Reasignados
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <span>📊 Estados de Reasignados</span>
+            <small v-if="estadosFiltrados.length > 0" class="text-muted">
+              {{ estadosFiltrados.length }} total
+            </small>
           </div>
           <div class="card-body">
             <div v-if="loading" class="text-center py-4">
@@ -66,8 +77,11 @@
                 <span class="visually-hidden">Cargando...</span>
               </div>
             </div>
-            <div v-else class="table-responsive">
-              <table class="table table-hover mb-0" v-if="estados.length > 0">
+            <div v-else>
+              <!-- Vista Desktop (Tabla) -->
+              <div class="table-wrapper">
+                <div class="table-responsive">
+                  <table class="table table-hover mb-0" v-if="estadosFiltrados.length > 0">
                 <thead>
                   <tr>
                     <th>#</th>
@@ -81,7 +95,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="estado in estados" :key="estado.id" :class="{ 'table-secondary': !estado.activo }">
+                  <tr v-for="estado in estadosPaginados" :key="estado.id" :class="{ 'table-secondary': !estado.activo }">
                     <td><strong>#{{ estado.id }}</strong></td>
                     <td><span style="font-size: 1.5rem;">{{ estado.icono || '◯' }}</span></td>
                     <td><code>{{ estado.codigo }}</code></td>
@@ -117,9 +131,31 @@
                   </tr>
                 </tbody>
               </table>
-              <div v-else class="text-center py-4 text-muted">
-                <span>ℹ️</span> Sin catálogos disponibles
+                <div v-else class="text-center py-4 text-muted">
+                  <span>ℹ️</span> Sin estados disponibles
+                </div>
               </div>
+              </div>
+              <!-- Paginación -->
+              <nav v-if="estadosFiltrados.length > itemsPerPage" class="mt-3">
+                <ul class="pagination justify-content-center mb-0">
+                  <li class="page-item" :class="{ disabled: currentPageEstados === 1 }">
+                    <button class="page-link" @click="currentPageEstados = 1" :disabled="currentPageEstados === 1">«</button>
+                  </li>
+                  <li class="page-item" :class="{ disabled: currentPageEstados === 1 }">
+                    <button class="page-link" @click="currentPageEstados--" :disabled="currentPageEstados === 1">‹</button>
+                  </li>
+                  <li v-for="p in totalPagesEstados" :key="p" class="page-item" :class="{ active: p === currentPageEstados }">
+                    <button class="page-link" @click="currentPageEstados = p">{{ p }}</button>
+                  </li>
+                  <li class="page-item" :class="{ disabled: currentPageEstados === totalPagesEstados }">
+                    <button class="page-link" @click="currentPageEstados++" :disabled="currentPageEstados === totalPagesEstados">›</button>
+                  </li>
+                  <li class="page-item" :class="{ disabled: currentPageEstados === totalPagesEstados }">
+                    <button class="page-link" @click="currentPageEstados = totalPagesEstados" :disabled="currentPageEstados === totalPagesEstados">»</button>
+                  </li>
+                </ul>
+              </nav>
             </div>
           </div>
         </div>
@@ -127,19 +163,30 @@
 
       <!-- Importancias -->
       <div v-if="activeTab === 'importancias'" class="tab-pane fade show active">
-        <!-- Acciones -->
+        <!-- Acciones y Filtros -->
         <div class="row mb-4">
-          <div class="col-auto">
-            <button @click="openCreateImportancia" class="btn btn-success" v-if="isAdmin">
+          <div class="col-12 col-md-auto mb-2 mb-md-0">
+            <button @click="openCreateImportancia" class="btn btn-success w-100 w-md-auto" v-if="isAdmin">
               ➕ Nueva Importancia
             </button>
+          </div>
+          <div class="col-12 col-md">
+            <input
+              v-model="filtroImportancias"
+              type="text"
+              class="form-control"
+              placeholder="🔍 Buscar por nombre o código..."
+              @input="currentPageImportancias = 1" />
           </div>
         </div>
 
         <!-- Tabla de Importancias -->
         <div class="card">
-          <div class="card-header bg-light">
-            <span>⚡</span> Importancias
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <span>⚡ Importancias</span>
+            <small v-if="importanciasFiltradas.length > 0" class="text-muted">
+              {{ importanciasFiltradas.length }} total
+            </small>
           </div>
           <div class="card-body">
             <div v-if="loading" class="text-center py-4">
@@ -147,8 +194,11 @@
                 <span class="visually-hidden">Cargando...</span>
               </div>
             </div>
-            <div v-else class="table-responsive">
-              <table class="table table-hover mb-0" v-if="importancias.length > 0">
+            <div v-else>
+              <!-- Vista Desktop (Tabla) -->
+              <div class="table-wrapper">
+                <div class="table-responsive">
+                  <table class="table table-hover mb-0" v-if="importanciasFiltradas.length > 0">
                 <thead>
                   <tr>
                     <th>#</th>
@@ -162,7 +212,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="imp in importancias" :key="imp.id" :class="{ 'table-secondary': !imp.activo }">
+                  <tr v-for="imp in importanciasPaginadas" :key="imp.id" :class="{ 'table-secondary': !imp.activo }">
                     <td><strong>#{{ imp.id }}</strong></td>
                     <td><span style="font-size: 1.5rem;">{{ imp.icono || '◯' }}</span></td>
                     <td><code>{{ imp.codigo }}</code></td>
@@ -198,9 +248,31 @@
                   </tr>
                 </tbody>
               </table>
-              <div v-else class="text-center py-4 text-muted">
-                <span>ℹ️</span> Sin importancias disponibles
+                <div v-else class="text-center py-4 text-muted">
+                  <span>ℹ️</span> Sin importancias disponibles
+                </div>
               </div>
+              </div>
+              <!-- Paginación -->
+              <nav v-if="importanciasFiltradas.length > itemsPerPage" class="mt-3">
+                <ul class="pagination justify-content-center mb-0">
+                  <li class="page-item" :class="{ disabled: currentPageImportancias === 1 }">
+                    <button class="page-link" @click="currentPageImportancias = 1" :disabled="currentPageImportancias === 1">«</button>
+                  </li>
+                  <li class="page-item" :class="{ disabled: currentPageImportancias === 1 }">
+                    <button class="page-link" @click="currentPageImportancias--" :disabled="currentPageImportancias === 1">‹</button>
+                  </li>
+                  <li v-for="p in totalPagesImportancias" :key="p" class="page-item" :class="{ active: p === currentPageImportancias }">
+                    <button class="page-link" @click="currentPageImportancias = p">{{ p }}</button>
+                  </li>
+                  <li class="page-item" :class="{ disabled: currentPageImportancias === totalPagesImportancias }">
+                    <button class="page-link" @click="currentPageImportancias++" :disabled="currentPageImportancias === totalPagesImportancias">›</button>
+                  </li>
+                  <li class="page-item" :class="{ disabled: currentPageImportancias === totalPagesImportancias }">
+                    <button class="page-link" @click="currentPageImportancias = totalPagesImportancias" :disabled="currentPageImportancias === totalPagesImportancias">»</button>
+                  </li>
+                </ul>
+              </nav>
             </div>
           </div>
         </div>
@@ -208,19 +280,30 @@
 
       <!-- Gerencias -->
       <div v-if="activeTab === 'gerencias'" class="tab-pane fade show active">
-        <!-- Acciones -->
+        <!-- Acciones y Filtros -->
         <div class="row mb-4">
-          <div class="col-auto">
-            <button @click="openCreateGerencia" class="btn btn-success" v-if="isAdmin">
+          <div class="col-12 col-md-auto mb-2 mb-md-0">
+            <button @click="openCreateGerencia" class="btn btn-success w-100 w-md-auto" v-if="isAdmin">
               ➕ Nueva Gerencia
             </button>
+          </div>
+          <div class="col-12 col-md">
+            <input
+              v-model="filtroGerencias"
+              type="text"
+              class="form-control"
+              placeholder="🔍 Buscar por nombre o código..."
+              @input="currentPageGerencias = 1" />
           </div>
         </div>
 
         <!-- Tabla de Gerencias -->
         <div class="card">
-          <div class="card-header bg-light">
-            <span>🏢</span> Gerencias
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <span>🏢 Gerencias</span>
+            <small v-if="gerenciasFiltradas.length > 0" class="text-muted">
+              {{ gerenciasFiltradas.length }} total
+            </small>
           </div>
           <div class="card-body">
             <div v-if="loading" class="text-center py-4">
@@ -228,8 +311,11 @@
                 <span class="visually-hidden">Cargando...</span>
               </div>
             </div>
-            <div v-else class="table-responsive">
-              <table class="table table-hover mb-0" v-if="gerencias.length > 0">
+            <div v-else>
+              <!-- Vista Desktop (Tabla) -->
+              <div class="table-wrapper">
+                <div class="table-responsive">
+                  <table class="table table-hover mb-0" v-if="gerenciasFiltradas.length > 0">
                 <thead>
                   <tr>
                     <th>#</th>
@@ -241,7 +327,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="gerencia in gerencias" :key="gerencia.id" :class="{ 'table-secondary': !gerencia.activo }">
+                  <tr v-for="gerencia in gerenciasPaginadas" :key="gerencia.id" :class="{ 'table-secondary': !gerencia.activo }">
                     <td><strong>#{{ gerencia.id }}</strong></td>
                     <td><code>{{ gerencia.codigo }}</code></td>
                     <td><strong>{{ gerencia.nombre }}</strong></td>
@@ -260,9 +346,31 @@
                   </tr>
                 </tbody>
               </table>
-              <div v-else class="text-center py-4 text-muted">
-                <span>ℹ️</span> Sin gerencias disponibles
+                <div v-else class="text-center py-4 text-muted">
+                  <span>ℹ️</span> Sin gerencias disponibles
+                </div>
               </div>
+              </div>
+              <!-- Paginación -->
+              <nav v-if="gerenciasFiltradas.length > itemsPerPage" class="mt-3">
+                <ul class="pagination justify-content-center mb-0">
+                  <li class="page-item" :class="{ disabled: currentPageGerencias === 1 }">
+                    <button class="page-link" @click="currentPageGerencias = 1" :disabled="currentPageGerencias === 1">«</button>
+                  </li>
+                  <li class="page-item" :class="{ disabled: currentPageGerencias === 1 }">
+                    <button class="page-link" @click="currentPageGerencias--" :disabled="currentPageGerencias === 1">‹</button>
+                  </li>
+                  <li v-for="p in totalPagesGerencias" :key="p" class="page-item" :class="{ active: p === currentPageGerencias }">
+                    <button class="page-link" @click="currentPageGerencias = p">{{ p }}</button>
+                  </li>
+                  <li class="page-item" :class="{ disabled: currentPageGerencias === totalPagesGerencias }">
+                    <button class="page-link" @click="currentPageGerencias++" :disabled="currentPageGerencias === totalPagesGerencias">›</button>
+                  </li>
+                  <li class="page-item" :class="{ disabled: currentPageGerencias === totalPagesGerencias }">
+                    <button class="page-link" @click="currentPageGerencias = totalPagesGerencias" :disabled="currentPageGerencias === totalPagesGerencias">»</button>
+                  </li>
+                </ul>
+              </nav>
             </div>
           </div>
         </div>
@@ -361,7 +469,16 @@ export default {
       isSaving: false,
       isAdmin: false,
       activeTab: 'estados',
-      usuarioActual: null
+      usuarioActual: null,
+      // Filtros
+      filtroEstados: '',
+      filtroImportancias: '',
+      filtroGerencias: '',
+      // Paginación
+      itemsPerPage: 10,
+      currentPageEstados: 1,
+      currentPageImportancias: 1,
+      currentPageGerencias: 1
     };
   },
   mounted() {
@@ -369,6 +486,47 @@ export default {
     this.cargarEstados();
     this.cargarImportancias();
     this.cargarGerencias();
+  },
+  computed: {
+    estadosFiltrados() {
+      return this.estados.filter(e =>
+        e.nombre.toLowerCase().includes(this.filtroEstados.toLowerCase()) ||
+        e.codigo.toLowerCase().includes(this.filtroEstados.toLowerCase())
+      );
+    },
+    estadosPaginados() {
+      const start = (this.currentPageEstados - 1) * this.itemsPerPage;
+      return this.estadosFiltrados.slice(start, start + this.itemsPerPage);
+    },
+    totalPagesEstados() {
+      return Math.ceil(this.estadosFiltrados.length / this.itemsPerPage);
+    },
+    importanciasFiltradas() {
+      return this.importancias.filter(i =>
+        i.nombre.toLowerCase().includes(this.filtroImportancias.toLowerCase()) ||
+        i.codigo.toLowerCase().includes(this.filtroImportancias.toLowerCase())
+      );
+    },
+    importanciasPaginadas() {
+      const start = (this.currentPageImportancias - 1) * this.itemsPerPage;
+      return this.importanciasFiltradas.slice(start, start + this.itemsPerPage);
+    },
+    totalPagesImportancias() {
+      return Math.ceil(this.importanciasFiltradas.length / this.itemsPerPage);
+    },
+    gerenciasFiltradas() {
+      return this.gerencias.filter(g =>
+        g.nombre.toLowerCase().includes(this.filtroGerencias.toLowerCase()) ||
+        g.codigo.toLowerCase().includes(this.filtroGerencias.toLowerCase())
+      );
+    },
+    gerenciasPaginadas() {
+      const start = (this.currentPageGerencias - 1) * this.itemsPerPage;
+      return this.gerenciasFiltradas.slice(start, start + this.itemsPerPage);
+    },
+    totalPagesGerencias() {
+      return Math.ceil(this.gerenciasFiltradas.length / this.itemsPerPage);
+    }
   },
   methods: {
     async cargarPermiso() {
@@ -749,9 +907,10 @@ export default {
 
 <style scoped>
 .page-title {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: bold;
   color: #333;
+  margin-bottom: 1rem;
 }
 
 .nav-tabs .nav-link {
@@ -790,5 +949,196 @@ code {
   padding: 2px 6px;
   border-radius: 3px;
   color: #d63384;
+}
+
+/* Table wrapper para mejor scroll */
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.w-md-auto {
+  width: auto !important;
+}
+
+.pagination {
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.pagination .page-link {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .table {
+    font-size: 0.85rem;
+  }
+
+  .table thead th {
+    padding: 0.5rem 0.35rem !important;
+    font-size: 0.8rem;
+  }
+
+  .table td {
+    padding: 0.4rem 0.35rem !important;
+  }
+
+  .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .card {
+    margin-bottom: 1rem;
+  }
+
+  .card-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .pagination .page-link {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .table {
+    font-size: 0.7rem;
+  }
+
+  .table thead th {
+    padding: 0.35rem 0.2rem !important;
+    font-size: 0.65rem;
+  }
+
+  .table td {
+    padding: 0.3rem 0.2rem !important;
+    word-break: break-word;
+  }
+
+  .btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .btn-sm {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.65rem;
+  }
+
+  .btn-group-sm > .btn {
+    padding: 0.2rem 0.3rem;
+  }
+
+  .form-control {
+    font-size: 16px;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .form-select {
+    font-size: 0.9rem;
+  }
+
+  .form-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .card {
+    margin-bottom: 0.75rem;
+    border-radius: 6px;
+  }
+
+  .card-header {
+    padding: 0.75rem;
+    font-size: 0.95rem;
+  }
+
+  .card-body {
+    padding: 0.75rem;
+  }
+
+  .text-muted {
+    font-size: 0.8rem;
+  }
+
+  h3, h4, h5 {
+    font-size: 1rem;
+  }
+
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+
+  .pagination .page-link {
+    padding: 0.3rem 0.4rem;
+    font-size: 0.7rem;
+  }
+
+  .row > .col-auto {
+    width: 100%;
+  }
+
+  .col-md {
+    width: 100%;
+  }
+}
+
+/* Optimización para zoom - Mantener compacto */
+.table {
+  table-layout: fixed;
+  width: 100%;
+  font-size: 0.7rem;
+}
+
+.table th,
+.table td {
+  padding: 0.35rem 0.3rem !important;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
+}
+
+.table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 </style>

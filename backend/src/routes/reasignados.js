@@ -9,34 +9,52 @@ const { obtenerUsuario, crearNotificacionSistema } = require('../services/notifi
 router.get('/', requireAuth,async (req, res) => {
   try {
     const usuario = req.usuarioAuth;
+    console.log(`\n📋 GET /api/reasignados - Usuario: ${usuario.correo}, Rol: ${usuario.rol}`);
+
     let query = 'SELECT r.*, e.correo FROM reasignados r LEFT JOIN empleados e ON r.usuario_id = e.id';
     let params = [];
 
     // Si el usuario no puede ver todo, filtrar solo sus documentos
-    if (!canViewAll(usuario)) {
+    const puedeVerTodo = canViewAll(usuario);
+    console.log(`   canViewAll(${usuario.rol}): ${puedeVerTodo}`);
+
+    if (!puedeVerTodo) {
       // Obtener el usuario_id de la tabla usuarios basado en el correo
       const usuarioId = await getUserIdFromCorreo(db, usuario.correo);
+      console.log(`   Buscando usuario_id para correo: ${usuario.correo} → ${usuarioId}`);
 
       if (usuarioId) {
         query += ' WHERE r.usuario_id = ?';
         params.push(usuarioId);
+        console.log(`   Filtrando por usuario_id: ${usuarioId}`);
       } else {
         // Si no existe en la tabla usuarios, no mostrar nada
+        console.log(`   ⚠️ Usuario no encontrado en tabla usuarios, retornando lista vacía`);
         return res.json([]);
       }
+    } else {
+      console.log(`   Usuario puede ver todo - sin filtro`);
     }
 
     query += ' ORDER BY r.id DESC LIMIT 50';
     const [rows] = await db.query(query, params);
+    console.log(`   Retornando ${rows.length} documentos`);
     res.json(rows);
   } catch (err) {
+    console.error('❌ Error en GET /reasignados:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   try {
+    const usuario = req.usuarioAuth;
     const b = req.body;
+
+    // Solo admin y secretaria pueden crear documentos
+    if (!canViewAll(usuario)) {
+      return res.status(403).json({ error: 'Sin permiso para crear documentos' });
+    }
 
     if (!b.usuario_id) {
       return res.status(400).json({ error: 'Debe seleccionar un usuario registrado' });
@@ -54,21 +72,25 @@ router.post('/', async (req, res) => {
     const usuarioSeleccionado = usuarios[0];
     const reasignadoNombre = (usuarioSeleccionado.nombre || '').trim() || 'Usuario';
 
+    const notificar = b.notificar !== false ? true : false;
+
     const [result] = await db.query(
-      'INSERT INTO reasignados (numero_documento, tipo_documento, importancia, numero_tramite, fecha_documento, fecha_reasignacion, fecha_max_respuesta, reasignado_a, usuario_id, comentario, respuesta, remitente, destinatario, asunto, estado, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [b.numero_documento || b.document_number || null, b.tipo_documento || null, b.importancia || null, b.numero_tramite || null, b.fecha_documento || b.date || null, b.fecha_reasignacion || null, b.fecha_max_respuesta || null, reasignadoNombre, usuarioSeleccionado.id, b.comentario || b.subject || null, b.respuesta || null, b.remitente || b.sender || null, b.destinatario || null, b.asunto || null, b.estado || b.status || null, JSON.stringify(b.extra || {})]
+      'INSERT INTO reasignados (numero_documento, tipo_documento, importancia, numero_tramite, fecha_documento, fecha_reasignacion, fecha_max_respuesta, reasignado_a, usuario_id, comentario, respuesta, remitente, destinatario, asunto, estado, notificar, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [b.numero_documento || b.document_number || null, b.tipo_documento || null, b.importancia || null, b.numero_tramite || null, b.fecha_documento || b.date || null, b.fecha_reasignacion || null, b.fecha_max_respuesta || null, reasignadoNombre, usuarioSeleccionado.id, b.comentario || b.subject || null, b.respuesta || null, b.remitente || b.sender || null, b.destinatario || null, b.asunto || null, b.estado || b.status || null, notificar, JSON.stringify(b.extra || {})]
     );
 
-    // Enviar notificacion en background (no bloquea la respuesta)
-    enviarNotificacionDocumentos({ correo: usuarioSeleccionado.correo || null, nombre: reasignadoNombre }, [{
-      numero_documento: b.numero_documento || b.document_number || null,
-      numero_tramite: b.numero_tramite || null,
-      tipo_documento: b.tipo_documento || null,
-      remitente: b.remitente || b.sender || null,
-      destinatario: b.destinatario || null,
-      asunto: b.asunto || null,
-      fecha_max_respuesta: b.fecha_max_respuesta || null
-    }], 'nuevo').catch(err => console.error('❌ Error enviando correo:', err.message));
+    // Enviar notificacion en background solo si notificar es true
+    if (notificar) {
+      enviarNotificacionDocumentos({ correo: usuarioSeleccionado.correo || null, nombre: reasignadoNombre }, [{
+        numero_documento: b.numero_documento || b.document_number || null,
+        numero_tramite: b.numero_tramite || null,
+        tipo_documento: b.tipo_documento || null,
+        remitente: b.remitente || b.sender || null,
+        destinatario: b.destinatario || null,
+        asunto: b.asunto || null,
+        fecha_max_respuesta: b.fecha_max_respuesta || null
+      }], 'nuevo').catch(err => console.error('❌ Error enviando correo:', err.message));
+    }
 
     res.json({ id: result.insertId });
   } catch (err) {
@@ -76,22 +98,43 @@ router.post('/', async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // CRUD endpoints
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
+    const usuario = req.usuarioAuth;
     const [rows] = await db.query('SELECT * FROM reasignados WHERE id = ?', [req.params.id]);
-    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    if (!rows.length) return res.status(404).json({ error: 'Documento no encontrado' });
+
+    // Verificar control de acceso: si no puede ver todo, debe ser usuario asignado
+    if (!canViewAll(usuario)) {
+      const usuarioId = await getUserIdFromCorreo(db, usuario.correo);
+      if (!usuarioId || rows[0].usuario_id !== usuarioId) {
+        return res.status(403).json({ error: 'Sin permiso para ver este documento' });
+      }
+    }
+
     res.json(rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   try {
+    const usuario = req.usuarioAuth;
     const b = req.body;
     const [prevRows] = await db.query('SELECT * FROM reasignados WHERE id = ?', [req.params.id]);
     const prev = prevRows.length ? prevRows[0] : null;
+
+    if (!prev) {
+      return res.status(404).json({ error: 'Documento no encontrado' });
+    }
+
+    // Verificar control de acceso: si no puede ver todo, debe ser usuario asignado
+    if (!canViewAll(usuario)) {
+      const usuarioId = await getUserIdFromCorreo(db, usuario.correo);
+      if (!usuarioId || prev.usuario_id !== usuarioId) {
+        return res.status(403).json({ error: 'Sin permiso para editar este documento' });
+      }
+    }
 
     if (!b.usuario_id) {
       return res.status(400).json({ error: 'Debe seleccionar un usuario registrado' });
@@ -108,8 +151,9 @@ router.put('/:id', async (req, res) => {
 
     const usuarioSeleccionado = usuarios[0];
     const reasignadoNombre = (usuarioSeleccionado.nombre || '').trim() || 'Usuario';
+    const notificar = b.notificar !== false ? true : false;
 
-    await db.query('UPDATE reasignados SET numero_documento = ?, tipo_documento = ?, importancia = ?, numero_tramite = ?, fecha_documento = ?, fecha_reasignacion = ?, fecha_max_respuesta = ?, reasignado_a = ?, usuario_id = ?, comentario = ?, respuesta = ?, remitente = ?, destinatario = ?, asunto = ?, estado = ?, extra = ? WHERE id = ?', [b.numero_documento || b.document_number || null, b.tipo_documento || null, b.importancia || null, b.numero_tramite || null, b.fecha_documento || b.date || null, b.fecha_reasignacion || null, b.fecha_max_respuesta || null, reasignadoNombre, usuarioSeleccionado.id, b.comentario || b.subject || null, b.respuesta || null, b.remitente || b.sender || null, b.destinatario || null, b.asunto || null, b.estado || b.status || null, JSON.stringify(b.extra || {}), req.params.id]);
+    await db.query('UPDATE reasignados SET numero_documento = ?, tipo_documento = ?, importancia = ?, numero_tramite = ?, fecha_documento = ?, fecha_reasignacion = ?, fecha_max_respuesta = ?, reasignado_a = ?, usuario_id = ?, comentario = ?, respuesta = ?, remitente = ?, destinatario = ?, asunto = ?, estado = ?, notificar = ?, extra = ? WHERE id = ?', [b.numero_documento || b.document_number || null, b.tipo_documento || null, b.importancia || null, b.numero_tramite || null, b.fecha_documento || b.date || null, b.fecha_reasignacion || null, b.fecha_max_respuesta || null, reasignadoNombre, usuarioSeleccionado.id, b.comentario || b.subject || null, b.respuesta || null, b.remitente || b.sender || null, b.destinatario || null, b.asunto || null, b.estado || b.status || null, notificar, JSON.stringify(b.extra || {}), req.params.id]);
 
     const nuevoEstado = b.estado || b.status || null;
     const estadoAnterior = prev ? prev.estado : null;
@@ -176,8 +220,8 @@ router.put('/:id', async (req, res) => {
         }
       }
 
-      // Enviar notificaciones en background (no bloquea la respuesta)
-      if (destinatarioCorreo && destinatarioCorreo.includes('@')) {
+      // Enviar notificaciones en background (no bloquea la respuesta) solo si notificar es true
+      if (notificar && destinatarioCorreo && destinatarioCorreo.includes('@')) {
         crearNotificacionSistema({
           usuario_id: usuarioIdAsignado || null,
           correo_usuario: destinatarioCorreo,
@@ -204,9 +248,23 @@ router.put('/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   try {
+    const usuario = req.usuarioAuth;
+    const [rows] = await db.query('SELECT usuario_id FROM reasignados WHERE id = ?', [req.params.id]);
+
+    if (!rows.length) {
+      return res.status(404).json({ error: 'Documento no encontrado' });
+    }
+
+    // Solo admin y secretaria pueden eliminar documentos
+    if (!canViewAll(usuario)) {
+      return res.status(403).json({ error: 'Sin permiso para eliminar documentos' });
+    }
+
     await db.query('DELETE FROM reasignados WHERE id = ?', [req.params.id]);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+module.exports = router;

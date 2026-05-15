@@ -1,8 +1,18 @@
 <template>
   <div class="p-4">
+    <!-- Loader mientras se cargan datos iniciales -->
+    <div v-if="cargandoDatos" class="loader-overlay">
+      <div class="loader-content">
+        <div class="spinner-border text-primary mb-3" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="text-muted">Cargando dashboard...</p>
+      </div>
+    </div>
+
     <!-- All KPI Cards - Clickeable para filtros -->
     <div class="row mb-5">
-      <div class="col-lg-2-4 col-md-4 mb-4">
+      <div class="col-lg-2 col-md-4 mb-4">
         <div class="kpi-card reasignados kpi-clickable" @click="goToReasignados()">
           <div class="kpi-icon">📋</div>
           <div class="kpi-title">Reasignados</div>
@@ -10,7 +20,7 @@
           <small class="kpi-subtitle">Total de documentos</small>
         </div>
       </div>
-      <div class="col-lg-2-4 col-md-4 mb-4">
+      <div class="col-lg-2 col-md-4 mb-4">
         <div class="kpi-card pendientes kpi-clickable" @click="goToReasignados('pendientes')">
           <div class="kpi-icon">⏳</div>
           <div class="kpi-title">Pendientes</div>
@@ -18,7 +28,7 @@
           <small class="kpi-subtitle">En estado pendiente</small>
         </div>
       </div>
-      <div class="col-lg-2-4 col-md-4 mb-4">
+      <div class="col-lg-2 col-md-4 mb-4">
         <div class="kpi-card vencidos kpi-clickable" @click="goToReasignados('vencidos')">
           <div class="kpi-icon">⛔</div>
           <div class="kpi-title">Vencidos</div>
@@ -26,7 +36,7 @@
           <small class="kpi-subtitle">Plazo vencido</small>
         </div>
       </div>
-      <div class="col-lg-2-4 col-md-4 mb-4">
+      <div class="col-lg-2 col-md-4 mb-4">
         <div class="kpi-card proximosvencer kpi-clickable" @click="goToReasignados('proximosvencer')">
           <div class="kpi-icon">⚠️</div>
           <div class="kpi-title">Próximos a Vencer</div>
@@ -34,7 +44,7 @@
           <small class="kpi-subtitle">En 24 horas</small>
         </div>
       </div>
-      <div class="col-lg-2-4 col-md-4 mb-4">
+      <div class="col-lg-2 col-md-4 mb-4">
         <div class="kpi-card completos kpi-clickable" @click="goToReasignados('completos')">
           <div class="kpi-icon">✓</div>
           <div class="kpi-title">Completos</div>
@@ -42,7 +52,7 @@
           <small class="kpi-subtitle">Documentos completados</small>
         </div>
       </div>
-      <div class="col-lg-2-4 col-md-4 mb-4">
+      <div class="col-lg-2 col-md-4 mb-4">
         <div class="kpi-card otros kpi-clickable" @click="mostrarEstadosOtros">
           <div class="kpi-icon">❓</div>
           <div class="kpi-title">Otros</div>
@@ -281,6 +291,7 @@ export default {
       documentoSeleccionado: null,
       estados: [],
       isSaving: false,
+      cargandoDatos: true,
       kpiReasignados: {
         total: 0,
         pendientes: 0,
@@ -307,10 +318,19 @@ export default {
       return rol === 'solo_vista' || rol === 'solo lectura' || rol === 'lectura';
     }
   },
-  mounted() {
-    this.cargarUsuarioActual();
-    this.cargarEstados();
-    this.loadData();
+  async mounted() {
+    this.cargandoDatos = true;
+    try {
+      await Promise.all([
+        this.cargarUsuarioActual(),
+        this.cargarEstados(),
+        this.loadData()
+      ]);
+    } catch (error) {
+      console.error('Error cargando dashboard:', error);
+    } finally {
+      this.cargandoDatos = false;
+    }
     // Auto-refresh cada 30 segundos
     this.refreshInterval = setInterval(() => {
       if (this.autoRefreshEnabled) {
@@ -843,6 +863,10 @@ export default {
   text-align: center;
   transition: transform 0.3s, box-shadow 0.3s;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .kpi-card:hover {
@@ -953,6 +977,193 @@ canvas {
 .badge {
   font-size: 0.9rem;
   padding: 5px 10px;
+}
+
+/* Loader overlay */
+.loader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(2px);
+}
+
+.loader-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.loader-content .spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+/* Responsive styles */
+@media (max-width: 1200px) {
+  .kpi-card {
+    min-height: 150px;
+  }
+
+  .kpi-card .h3 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  /* KPI Cards - stack on 2 columns */
+  .row > [class*="col-"] {
+    flex: 0 0 calc(50% - 0.5rem) !important;
+  }
+
+  .kpi-card {
+    min-height: 130px;
+    padding: 15px;
+  }
+
+  .kpi-card .h3 {
+    font-size: 1.25rem;
+  }
+
+  .kpi-card .text-muted {
+    font-size: 0.8rem;
+  }
+
+  /* Tables - horizontal scroll on mobile */
+  .table {
+    font-size: 0.85rem;
+  }
+
+  .table thead th {
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.75rem;
+  }
+
+  .table td {
+    padding: 0.4rem 0.25rem !important;
+  }
+
+  .mb-5 {
+    margin-bottom: 2rem !important;
+  }
+}
+
+@media (max-width: 576px) {
+  /* KPI Cards - single column */
+  .row > [class*="col-"] {
+    flex: 0 0 100% !important;
+  }
+
+  .kpi-card {
+    min-height: 100px;
+    padding: 12px;
+  }
+
+  .kpi-card .h3 {
+    font-size: 1rem;
+  }
+
+  .kpi-card .text-muted {
+    font-size: 0.7rem;
+  }
+
+  /* Header adjustments */
+  h3 {
+    font-size: 1.1rem !important;
+  }
+
+  h5 {
+    font-size: 0.95rem !important;
+  }
+
+  /* Table improvements */
+  .table-responsive {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table {
+    font-size: 0.75rem;
+    margin-bottom: 0;
+  }
+
+  .table thead th {
+    padding: 0.4rem 0.15rem !important;
+    font-size: 0.65rem;
+  }
+
+  .table td {
+    padding: 0.3rem 0.15rem !important;
+  }
+
+  .table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+
+  /* Form controls */
+  .form-control {
+    font-size: 16px;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .form-group {
+    margin-bottom: 0.75rem !important;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .btn-sm {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
+  }
+
+  /* Modals */
+  .modal-dialog {
+    margin: 0.5rem !important;
+  }
+
+  .modal-content {
+    border-radius: 10px;
+  }
+
+  /* Cards and boxes */
+  .card {
+    border-radius: 8px;
+  }
+
+  .expired-table-container,
+  .upcoming-expiry-container {
+    border-radius: 8px;
+  }
+
+  /* Padding adjustments */
+  .p-3 {
+    padding: 0.75rem !important;
+  }
+
+  .px-3 {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  .py-3 {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
 }
 
 </style>

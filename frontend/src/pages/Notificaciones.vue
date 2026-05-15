@@ -321,4 +321,75 @@ export default {
 .btn-group-sm {
   gap: 4px;
 }
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 1.3rem;
+  }
+
+  .table {
+    font-size: 0.85rem;
+  }
+
+  .table thead th {
+    padding: 0.5rem 0.25rem !important;
+  }
+
+  .table td {
+    padding: 0.4rem 0.25rem !important;
+  }
+
+  .btn-group-sm {
+    gap: 2px;
+  }
+
+  .btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .page-title {
+    font-size: 1rem;
+  }
+
+  .table {
+    font-size: 0.7rem;
+  }
+
+  .table thead th {
+    padding: 0.4rem 0.15rem !important;
+    font-size: 0.65rem;
+  }
+
+  .table td {
+    padding: 0.3rem 0.15rem !important;
+  }
+
+  .table-light {
+    opacity: 0.8;
+  }
+
+  .btn-group-sm {
+    gap: 2px;
+    flex-wrap: wrap;
+  }
+
+  .btn-group-sm .btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.65rem;
+  }
+
+  .form-control {
+    font-size: 16px;
+    padding: 0.4rem;
+  }
+
+  .btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+  }
+}
 </style>
