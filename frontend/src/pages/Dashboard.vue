@@ -321,12 +321,20 @@ export default {
   async mounted() {
     this.cargandoDatos = true;
     try {
+      // Verificar autenticación primero
+      await this.cargarUsuarioActual();
+
+      // Si llegamos aquí, el usuario está autenticado
       await Promise.all([
-        this.cargarUsuarioActual(),
         this.cargarEstados(),
         this.loadData()
       ]);
     } catch (error) {
+      if (error.response?.status === 401) {
+        console.warn('No autenticado - redirigiendo a login');
+        this.$router.push('/login');
+        return;
+      }
       console.error('Error cargando dashboard:', error);
     } finally {
       this.cargandoDatos = false;
