@@ -57,6 +57,17 @@ router.beforeEach(async (to, from, next) => {
 
   const requiereAdmin = to.meta.requiereAdmin === true
 
+  // Debug: mostrar información de acceso
+  if (to.path.includes('/admin') || requiereAdmin) {
+    console.log('🔍 [Router Debug]');
+    console.log('   Ruta:', to.path);
+    console.log('   Requiere Admin:', requiereAdmin);
+    console.log('   Usuario:', authStore.usuarioCorreo);
+    console.log('   Rol (raw):', authStore.usuario?.rol);
+    console.log('   isAdmin (getter):', authStore.isAdmin);
+    console.log('   isAuthenticated:', authStore.isAuthenticated);
+  }
+
   // Si la ruta requiere autenticación y el usuario no está autenticado
   if (requiereAuth && !authStore.isAuthenticated) {
     console.warn('🔐 Acceso denegado: Usuario no autenticado');
@@ -67,7 +78,8 @@ router.beforeEach(async (to, from, next) => {
   if (requiereAdmin && !authStore.isAdmin) {
     console.warn('🚫 Acceso denegado: Se requieren permisos de administrador');
     console.warn(`   Usuario: ${authStore.usuarioCorreo}`);
-    console.warn(`   Rol: ${authStore.usuarioRol}`);
+    console.warn(`   Rol: ${JSON.stringify(authStore.usuario?.rol)}`);
+    console.warn(`   isAdmin: ${authStore.isAdmin}`);
     // Mostrar notificación al usuario
     window.mostrarAlertaNoAutorizado = true;
     return next('/')
