@@ -189,10 +189,10 @@ export default {
   },
   mounted() {
     this.cargarNotificaciones();
-    // Auto-actualizar cada 15 segundos
-    this.intervalo = setInterval(() => {
-      this.cargarNotificaciones();
-    }, 15000);
+    // Auto-actualizar desactivado para reducir peticiones al servidor
+    // this.intervalo = setInterval(() => {
+    //   this.cargarNotificaciones();
+    // }, 15000);
   },
   beforeUnmount() {
     if (this.intervalo) {
