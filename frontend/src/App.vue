@@ -13,6 +13,15 @@
       </div>
     </div>
 
+    <!-- Alerta de acceso denegado -->
+    <div v-if="mostrarAlertaAccesoDenegado" class="position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index: 9999;">
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-circle"></i>
+        <strong> Acceso Denegado</strong> - No tienes permisos para acceder a esta sección. Se requieren permisos de administrador.
+        <button type="button" class="btn-close" @click="mostrarAlertaAccesoDenegado = false"></button>
+      </div>
+    </div>
+
     <!-- Sidebar principal - Toggleable en todas las pantallas -->
     <aside v-if="authStore.isAuthenticated" v-show="showSidebar" class="bg-primary text-white flex-column p-0 sidebar position-fixed start-0 top-0 vh-100" :class="{ 'd-md-flex': showSidebar }" style="z-index: 1050; width: 200px;">
       <div class="d-flex align-items-center justify-content-between py-4 border-bottom border-secondary px-3">
@@ -199,7 +208,8 @@ export default {
       isUploading: false,
       showSidebar: window.innerWidth >= 768,
       isDesktop: window.innerWidth >= 768,
-      version: packageJson.version
+      version: packageJson.version,
+      mostrarAlertaAccesoDenegado: false
     }
   },
   methods: {
@@ -263,6 +273,14 @@ export default {
       // Cerrar sidebar automáticamente al navegar en pantallas pequeñas
       if (!this.isDesktop) {
         this.showSidebar = false;
+      }
+      // Verificar si hay intento de acceso denegado
+      if (window.mostrarAlertaNoAutorizado) {
+        window.mostrarAlertaNoAutorizado = false;
+        this.mostrarAlertaAccesoDenegado = true;
+        setTimeout(() => {
+          this.mostrarAlertaAccesoDenegado = false;
+        }, 5000);
       }
     }
   },

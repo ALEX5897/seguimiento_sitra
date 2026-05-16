@@ -59,11 +59,17 @@ router.beforeEach(async (to, from, next) => {
 
   // Si la ruta requiere autenticación y el usuario no está autenticado
   if (requiereAuth && !authStore.isAuthenticated) {
+    console.warn('🔐 Acceso denegado: Usuario no autenticado');
     return next('/login')
   }
 
   // Si la ruta requiere admin y el usuario no es admin
   if (requiereAdmin && !authStore.isAdmin) {
+    console.warn('🚫 Acceso denegado: Se requieren permisos de administrador');
+    console.warn(`   Usuario: ${authStore.usuarioCorreo}`);
+    console.warn(`   Rol: ${authStore.usuarioRol}`);
+    // Mostrar notificación al usuario
+    window.mostrarAlertaNoAutorizado = true;
     return next('/')
   }
 

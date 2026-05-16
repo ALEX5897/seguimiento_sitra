@@ -36,17 +36,30 @@ export const useAuthStore = defineStore('auth', {
     /**
      * Verifica si el usuario es administrador
      */
-    isAdmin: (state) => state.usuario?.rol === 'admin',
+    isAdmin: (state) => {
+      const rol = state.usuario?.rol;
+      if (!rol) return false;
+      // Puede ser string o objeto con propiedad 'nombre'
+      return rol === 'admin' || rol?.nombre === 'admin';
+    },
 
     /**
      * Verifica si el usuario es secretaria
      */
-    isSecretaria: (state) => state.usuario?.rol === 'secretaria',
+    isSecretaria: (state) => {
+      const rol = state.usuario?.rol;
+      if (!rol) return false;
+      return rol === 'secretaria' || rol?.nombre === 'secretaria';
+    },
 
     /**
      * Verifica si el usuario es solo vista
      */
-    isSoloVista: (state) => state.usuario?.rol === 'solo_vista',
+    isSoloVista: (state) => {
+      const rol = state.usuario?.rol;
+      if (!rol) return false;
+      return rol === 'solo_vista' || rol?.nombre === 'solo_vista';
+    },
 
     /**
      * Obtiene todos los permisos del usuario
