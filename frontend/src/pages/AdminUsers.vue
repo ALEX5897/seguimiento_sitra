@@ -539,7 +539,7 @@ export default {
     }
   },
   mounted() {
-    if (!this.authStore.usuarioAutenticado) {
+    if (!this.authStore.isAuthenticated) {
       this.mostrarAlerta('Debes estar autenticado para acceder a esta sección', 'danger');
       this.$router.push('/');
       return;
