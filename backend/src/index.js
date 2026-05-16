@@ -56,26 +56,40 @@ const allowedOrigins = [
   `http://${localIP}:5175`,
   '127.0.0.1:5173',
   '127.0.0.1:5174',
-  '127.0.0.1:5175'
+  '127.0.0.1:5175',
+  'http://172.16.1.72:5175',
+  'http://172.16.40.64:5175'
 ].filter(Boolean);
 
 console.log('📡 CORS Origins permitidos:', allowedOrigins);
 
 app.use(cors({
-  origin: (origin, callback) => {
-    // En desarrollo, permitir solicitudes sin origen o desde orígenes conocidos
-    if (!origin || allowedOrigins.some(allowed => origin.includes(allowed.split('//')[1] || ''))) {
+  origin: function(origin, callback) {
+    // Si no hay origin (peticiones sin navegador, como Postman, curl, etc)
+    if (!origin) {
       return callback(null, true);
     }
-    // También permitir cualquier origen en desarrollo
+
+    // En desarrollo, permitir todos los orígenes
     if (process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
-    return callback(new Error('CORS origin no permitido'));
+
+    // En producción, verificar contra lista blanca
+    const isAllowed = allowedOrigins.some(allowed => {
+      return origin === allowed || origin.includes(allowed.split('//')[1] || '');
+    });
+
+    if (isAllowed) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('CORS origin no permitido: ' + origin));
   },
-  credentials: true, // Permitir cookies
+  credentials: true, // Permitir cookies con CORS
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Type']
 }));
 
 app.use(bodyParser());
