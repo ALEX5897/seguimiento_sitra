@@ -121,6 +121,10 @@ export default {
         this.usuariosActivos = response.data || [];
         this.setSeleccionadoPorId();
       } catch (error) {
+        if (error.response?.status === 401) {
+          console.warn('Sesión expirada al cargar usuarios');
+          return;
+        }
         console.error('Error cargando usuarios:', error);
       }
     },

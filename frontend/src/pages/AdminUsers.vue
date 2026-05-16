@@ -539,15 +539,33 @@ export default {
     }
   },
   mounted() {
-    this.cargarUsuarios();
-    this.cargarEmpleados();
-    this.cargarRoles();
-    this.cargarGerencias();
+    if (!this.authStore.usuarioAutenticado) {
+      this.mostrarAlerta('Debes estar autenticado para acceder a esta sección', 'danger');
+      this.$router.push('/');
+      return;
+    }
+    this.cargarDatos();
   },
   methods: {
     cambiarTab(tab) {
       this.tabActual = tab;
       this.cerrarModal();
+    },
+
+    async cargarDatos() {
+      try {
+        await Promise.all([
+          this.cargarUsuarios(),
+          this.cargarEmpleados(),
+          this.cargarRoles(),
+          this.cargarGerencias()
+        ]);
+      } catch (err) {
+        if (err.response?.status === 401) {
+          this.mostrarAlerta('Tu sesión ha expirado. Por favor, inicia sesión nuevamente', 'danger');
+          this.$router.push('/login');
+        }
+      }
     },
 
     async cargarUsuarios() {
@@ -556,6 +574,9 @@ export default {
         const response = await api.get('/admin/usuarios');
         this.usuarios = response.data.usuarios || [];
       } catch (err) {
+        if (err.response?.status === 401) {
+          throw err;
+        }
         this.mostrarAlerta('Error al cargar usuarios: ' + (err.response?.data?.error || err.message), 'danger');
       } finally {
         this.cargando = false;
@@ -567,6 +588,9 @@ export default {
         const response = await api.get('/usuarios');
         this.empleados = response.data || [];
       } catch (err) {
+        if (err.response?.status === 401) {
+          throw err;
+        }
         this.mostrarAlerta('Error al cargar empleados: ' + (err.response?.data?.error || err.message), 'danger');
       }
     },
@@ -576,6 +600,9 @@ export default {
         const response = await api.get('/admin/usuarios/lista/roles');
         this.roles = response.data.roles || [];
       } catch (err) {
+        if (err.response?.status === 401) {
+          throw err;
+        }
         this.mostrarAlerta('Error al cargar roles: ' + (err.response?.data?.error || err.message), 'danger');
       }
     },
