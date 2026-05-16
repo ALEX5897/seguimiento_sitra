@@ -255,7 +255,7 @@ export default {
       filterImportancia: '',
       selectedItem: null,
       refreshInterval: null,
-      autoRefreshEnabled: true
+      autoRefreshEnabled: false
     };
   },
   computed: {

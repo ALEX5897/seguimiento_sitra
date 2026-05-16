@@ -309,7 +309,7 @@ export default {
       expiredByUser: [],
       upcomingExpiry: [],
       refreshInterval: null,
-      autoRefreshEnabled: true
+      autoRefreshEnabled: false
     };
   },
   computed: {
