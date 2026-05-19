@@ -60,6 +60,20 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Debe seleccionar un usuario registrado' });
     }
 
+    // Validar que el número de documento no esté duplicado
+    const numeroDocumento = b.numero_documento || b.document_number;
+    if (numeroDocumento) {
+      const [documentosExistentes] = await db.query(
+        'SELECT id FROM reasignados WHERE numero_documento = ?',
+        [numeroDocumento]
+      );
+      if (documentosExistentes.length > 0) {
+        return res.status(400).json({
+          error: `Ya existe un documento con el número "${numeroDocumento}". No se permiten registros duplicados.`
+        });
+      }
+    }
+
     const [usuarios] = await db.query(
       'SELECT id, nombre, correo FROM empleados WHERE id = ? LIMIT 1',
       [b.usuario_id]

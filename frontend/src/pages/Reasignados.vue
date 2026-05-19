@@ -793,6 +793,18 @@ export default {
         showToast('Debes seleccionar un usuario registrado en "Reasignado a"', 'warning');
         return;
       }
+
+      // Validar que no exista un documento duplicado (solo para nuevos registros)
+      if (!this.editingId) {
+        const documentoDuplicado = this.items.some(item =>
+          item.numero_documento === this.form.numero_documento
+        );
+        if (documentoDuplicado) {
+          showToast(`Ya existe un documento con el número "${this.form.numero_documento}". No se permiten registros duplicados.`, 'error');
+          return;
+        }
+      }
+
       this.isSaving = true;
       try {
         if (this.editingId) {
