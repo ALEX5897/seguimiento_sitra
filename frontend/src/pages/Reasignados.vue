@@ -108,7 +108,6 @@
                 <th>Días Expirados</th>
                 <th>Número Documento</th>
                 <th>Tipo Documento</th>
-                <th>Importancia</th>
                 <th>Nro. Trámite</th>
                 <th>Fecha Máx. Respuesta</th>
                 <th>Reasignado a</th>
@@ -134,11 +133,6 @@
                 </td>
                 <td><strong>{{ item.numero_documento }}</strong></td>
                 <td>{{ item.tipo_documento }}</td>
-                <td>
-                  <span v-if="item.importancia" :class="getImportanceClass(item.importancia)" class="badge">
-                    {{ item.importancia }}
-                  </span>
-                </td>
                 <td>{{ item.numero_tramite }}</td>
                 <td>{{ formatDate(getDeadline(item)) }}</td>
                 <td><span>👤</span> {{ item.reasignado_a }}</td>
@@ -1190,7 +1184,17 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100px;
+  max-width: 120px;
+}
+
+.table td:nth-child(4),
+.table th:nth-child(4) {
+  max-width: 140px;
+}
+
+.table td:nth-child(6),
+.table th:nth-child(6) {
+  max-width: 130px;
 }
 
 .table thead th {
