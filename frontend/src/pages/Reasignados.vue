@@ -1184,17 +1184,38 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
+  max-width: 100px;
 }
 
+/* Número Documento - más grande */
 .table td:nth-child(4),
 .table th:nth-child(4) {
-  max-width: 140px;
+  max-width: 200px;
+  min-width: 150px;
 }
 
+/* Tipo Documento - más pequeño */
+.table td:nth-child(5),
+.table th:nth-child(5) {
+  max-width: 80px;
+}
+
+/* Nro. Trámite - normal */
 .table td:nth-child(6),
 .table th:nth-child(6) {
-  max-width: 130px;
+  max-width: 100px;
+}
+
+/* Días Expirados - más pequeño */
+.table td:nth-child(3),
+.table th:nth-child(3) {
+  max-width: 70px;
+}
+
+/* Fecha Máx. Respuesta - más pequeño */
+.table td:nth-child(7),
+.table th:nth-child(7) {
+  max-width: 110px;
 }
 
 .table thead th {
